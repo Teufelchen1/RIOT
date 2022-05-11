@@ -23,7 +23,7 @@
 
 #define VEC(u, f, s, us, h, v6a, z, po, pa, q, e)                           \
     { .uri = u, .full_uri = f, .scheme = s, .userinfo = us, .host = h,      \
-      .ipv6addr = v6a, .zoneid = z, .port = po, .path = pa,                 \
+      .ipv6addr = v6a, .zoneid = z, .port_str = po, .path = pa,             \
       .query = q, .expected = e}
 
 #define VEC_CHECK(comp, i, vec_msg)                                         \
@@ -59,7 +59,8 @@ typedef struct {
     char host[24];
     char ipv6addr[16];
     char zoneid[8];
-    char port[32];
+    char port_str[32];
+    uint16_t port;
     char path[48];
     char query[32];
     int expected;
@@ -67,7 +68,7 @@ typedef struct {
 
 /*
   VEC(uri_to_parse,
-      scheme, userinfo, host, port,
+      scheme, userinfo, host, port_str,
       path, query, expected return value)
 */
 static const validate_t validate_uris[] = {
@@ -85,8 +86,10 @@ static const validate_t validate_uris[] = {
         "fe80:db8::1",
         /* parsed zoneid */
         "tap0",
-        /* parsed port */
+        /* parsed port_str */
         "5683",
+        /* parsed port */
+        5683,
         /* parsed path */
         "/.well-known/core",
         /* parsed query */
@@ -101,6 +104,7 @@ static const validate_t validate_uris[] = {
         "fe80:db8::1",
         "",
         "5683",
+        5683,
         "/.well-known/core",
         "v=1",
         -1),
@@ -134,6 +138,7 @@ static const validate_t validate_uris[] = {
         "2001:db8::1",
         "",
         "5own",
+        5,
         "/v=1",
         "",
         0),
@@ -145,6 +150,7 @@ static const validate_t validate_uris[] = {
         "2001:db8::1",
         "",
         "5own",
+        5,
         "/:v=1",
         "",
         0),
@@ -156,6 +162,7 @@ static const validate_t validate_uris[] = {
         "2001:db8::1",
         "",
         "5own",
+        5,
         "/",
         "v=1",
         0),
@@ -167,6 +174,7 @@ static const validate_t validate_uris[] = {
         "",
         "",
         "5own",
+        5,
         "/av=1",
         "",
         0),
@@ -178,6 +186,7 @@ static const validate_t validate_uris[] = {
         "",
         "",
         "",
+        0,
         "//Rb[ʰ00J:d/5v=0",
         "",
         0),
@@ -189,6 +198,7 @@ static const validate_t validate_uris[] = {
         "",
         "",
         "",
+        0,
         "",
         "",
         -1),
@@ -200,6 +210,7 @@ static const validate_t validate_uris[] = {
         "",
         "",
         "",
+        0,
         "/R@[2008::1]:5own//R@[2008::1]:5own/",
         "v=1",
         0),
@@ -211,6 +222,7 @@ static const validate_t validate_uris[] = {
         "",
         "",
         "",
+        0,
         "/RZ[2001[8:01[8::1]:5o:1]:5oTMv=1",
         "",
         0),
@@ -222,6 +234,7 @@ static const validate_t validate_uris[] = {
         "",
         "",
         "",
+        0,
         "////////////////7///v=1",
         "",
         0),
@@ -233,6 +246,7 @@ static const validate_t validate_uris[] = {
         "",
         "",
         "",
+        0,
         "coa[:////[2001:db5ow:5own/Ov=1",
         "",
         0),
@@ -244,6 +258,7 @@ static const validate_t validate_uris[] = {
         "",
         "",
         "",
+        0,
         "+1-816-555-1212",
         "",
         0),
@@ -255,6 +270,7 @@ static const validate_t validate_uris[] = {
         "",
         "",
         "",
+        0,
         "+15105550101,+15105550102",
         "body=hello%20there",
         0),
@@ -266,6 +282,7 @@ static const validate_t validate_uris[] = {
         "",
         "",
         "",
+        0,
         "a",
         "",
         0),
@@ -277,6 +294,7 @@ static const validate_t validate_uris[] = {
         "",
         "",
         "",
+        0,
         "test@example.com",
         "",
         0),
@@ -288,6 +306,7 @@ static const validate_t validate_uris[] = {
         "",
         "",
         "",
+        0,
         "/rfc/rfc1808.txt",
         "",
         0),
@@ -299,6 +318,7 @@ static const validate_t validate_uris[] = {
         "",
         "",
         "",
+        0,
         "/rfc/rfc2396.txt",
         "",
         0),
@@ -310,6 +330,7 @@ static const validate_t validate_uris[] = {
         "2001:db8::7",
         "",
         "",
+        0,
         "/c=GB",
         "objectClass?one",
         0),
@@ -321,6 +342,7 @@ static const validate_t validate_uris[] = {
         "",
         "",
         "",
+        0,
         "John.Doe@example.com",
         "",
         0),
@@ -332,6 +354,7 @@ static const validate_t validate_uris[] = {
         "",
         "",
         "",
+        0,
         "comp.infosystems.www.servers.unix",
         "",
         0),
@@ -343,6 +366,7 @@ static const validate_t validate_uris[] = {
         "",
         "",
         "",
+        0,
         "+1-816-555-1212",
         "",
         0),
@@ -353,7 +377,8 @@ static const validate_t validate_uris[] = {
         "192.0.2.16",
         "",
         "",
-        "80",
+        "80
+        0,",
         "/",
         "",
         0),
@@ -365,6 +390,7 @@ static const validate_t validate_uris[] = {
         "",
         "",
         "",
+        0,
         "oasis:names:specification:docbook:dtd:xml:4.1.2",
         "",
         0),
@@ -376,6 +402,7 @@ static const validate_t validate_uris[] = {
         "",
         "",
         "",
+        0,
         "",
         "",
         -1),
@@ -387,6 +414,7 @@ static const validate_t validate_uris[] = {
         "",
         "",
         "",
+        0,
         "/",
         "",
         0),
@@ -398,6 +426,7 @@ static const validate_t validate_uris[] = {
         "",
         "",
         "",
+        0,
         "./this:that",
         "",
         0),
@@ -409,6 +438,7 @@ static const validate_t validate_uris[] = {
         "",
         "",
         "",
+        0,
         "",
         "",
         0),
@@ -420,6 +450,7 @@ static const validate_t validate_uris[] = {
         "",
         "",
         "",
+        0,
         "",
         "",
         0),
@@ -441,7 +472,7 @@ static void test_uri_parser__validate(void)
             VEC_CHECK(host, i, _failure_msg);
             VEC_CHECK(ipv6addr, i, _failure_msg);
             VEC_CHECK(zoneid, i, _failure_msg);
-            VEC_CHECK(port, i, _failure_msg);
+            VEC_CHECK(port_str, i, _failure_msg);
             VEC_CHECK(path, i, _failure_msg);
             VEC_CHECK(query, i, _failure_msg);
         }
@@ -465,7 +496,7 @@ static void test_uri_parser__unterminated_string(void)
     VEC_CHECK(host, 0, _failure_msg);
     VEC_CHECK(ipv6addr, 0, _failure_msg);
     VEC_CHECK(zoneid, 0, _failure_msg);
-    VEC_CHECK(port, 0, _failure_msg);
+    VEC_CHECK(port_str, 0, _failure_msg);
     VEC_CHECK(path, 0, _failure_msg);
     VEC_CHECK(query, 0, _failure_msg);
 }
