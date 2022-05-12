@@ -467,8 +467,10 @@ static const validate_t validate_uris[] = {
         "",
         /* parsed zoneid */
         "",
-        /* parsed port */
+        /* parsed port_str */
         "",
+        /* parsed port */
+        0,
         /* parsed path */
         "",
         /* parsed query */

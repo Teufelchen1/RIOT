@@ -18,17 +18,17 @@
  * @}
  */
 
-#include <//assert.h>
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 
 
 #include "uri_parser.h"
 
-#define PORT_STR_LEN    (5)
+#define MAX_PORT_STR_LEN    (5)
 
 #define ENABLE_DEBUG 0
-//#include "debug.h"
+#include "debug.h"
 
 /* strchr for non-Null-terminated strings (buffers) */
 static const char *_strchrb(const char *start, const char *stop, char c)
@@ -44,7 +44,7 @@ static const char *_strchrb(const char *start, const char *stop, char c)
 static const char *_consume_scheme(uri_parser_result_t *result, const char *uri,
                                    const char *uri_end, bool *has_authority)
 {
-    //assert(uri);
+    assert(uri);
 
     /* assume no authority section first */
     *has_authority = false;
@@ -98,6 +98,8 @@ bool _consume_port(uri_parser_result_t *result, const char *ipv6_end,
 {
     /* check for port after host part */
     const char *port_begin = NULL;
+    uint16_t port_str_len = 0;
+
     /* repeat until last ':' in authority section */
     /* if ipv6 address, check after ipv6 end marker */
     const char *p = (ipv6_end ? ipv6_end : result->host);
@@ -108,25 +110,43 @@ bool _consume_port(uri_parser_result_t *result, const char *ipv6_end,
 
     /* check if match */
     if (port_begin && (port_begin[0] == ':')) {
-        /* port should be at least one character, => + 1 */
-        if (port_begin + 1 == authority_end) {
+        port_begin++;
+
+        /* port should be at least one character long */
+        if (port_begin == authority_end) {
             return false;
         }
 
+        port_str_len = authority_end - port_begin;
+
         /* Verify that the port number is up to 5 (random) chars in size */
-        if (authority_end - (port_begin + 1) > PORT_STR_LEN) {
+        if (port_str_len > MAX_PORT_STR_LEN) {
+            return false;
+        }
+
+        /* Verify that all characters of the port are numerical */
+        for (int i = 0; i < port_str_len; ++i) {
+            if (!((port_begin[i] >= '0') && (port_begin[i] <= '9'))) {
+                return false;
+            }
+        }
+
+        /* Verify that the next character, after the port, is an invalid
+         * character for the atol function. Preventing it from reading out-
+         * side of the port section */
+        if ((authority_end[0] >= '0') && (authority_end[0] <= '9')) {
             return false;
         }
 
         /* Verify that the port is smaller or equal to UINT16_MAX. */
-        uint32_t port = atol(port_begin + 1);
+        uint32_t port = atol(port_begin);
         if (port > UINT16_MAX) {
             return false;
         }
 
         result->port = (uint16_t)port;
-        result->port_str = port_begin + 1;
-        result->port_str_len = authority_end - result->port_str;
+        result->port_str = port_begin;
+        result->port_str_len = port_str_len;
 
         /* cut host part before port and ':' */
         result->host_len -= result->port_str_len + 1;
@@ -138,7 +158,7 @@ bool _consume_port(uri_parser_result_t *result, const char *ipv6_end,
 static const char *_consume_authority(uri_parser_result_t *result, const char *uri,
                                       const char *uri_end)
 {
-    //assert(uri);
+    assert(uri);
 
     /* search until first '/' */
     const char *authority_end = _strchrb(uri, uri_end, '/');
@@ -197,7 +217,7 @@ static const char *_consume_authority(uri_parser_result_t *result, const char *u
 static const char *_consume_path(uri_parser_result_t *result, const char *uri,
                                  const char *uri_end)
 {
-    //assert(uri);
+    assert(uri);
 
     result->path = uri;
     result->path_len = (uri_end - uri);
@@ -338,16 +358,16 @@ int uri_parser_split_query(const uri_parser_result_t *uri,
     const char *query_end;
     unsigned idx = 0;
 
-    //assert(uri);
-    //assert(params);
+    assert(uri);
+    assert(params);
 
     if ((uri->query == NULL) || (uri->query_len == 0) || (params_len == 0)) {
         return 0;
     }
-    //assert(params[0].name == 0);
-    //assert(params[0].name_len == 0);
-    //assert(params[0].value == 0);
-    //assert(params[0].value_len == 0);
+    assert(params[0].name == 0);
+    assert(params[0].name_len == 0);
+    assert(params[0].value == 0);
+    assert(params[0].value_len == 0);
     query_end = uri->query + uri->query_len;
     params[0].name = uri->query;
     for (const char *c = uri->query; c < query_end; c++) {
@@ -369,7 +389,7 @@ int uri_parser_split_query(const uri_parser_result_t *uri,
                     /* c is an ampersand (&), so mark the next char as the next
                      * parameter's name name */
                     params[++idx].name = c + 1U;
-                    //assert(params[idx].name_len == 0);
+                    assert(params[idx].name_len == 0);
                 }
                 else {
                     /* c is an ampersand (&), but we exceeded param_len.
@@ -388,7 +408,7 @@ int uri_parser_split_query(const uri_parser_result_t *uri,
                 /* pick next char as start of value */
                 params[idx].value = c + 1U;
                 /* make sure the precondition on params is met */
-                //assert(params[idx].value_len == 0);
+                assert(params[idx].value_len == 0);
                 break;
             default:
                 break;
