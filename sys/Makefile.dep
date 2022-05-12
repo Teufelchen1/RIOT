@@ -642,6 +642,7 @@ endif
 ifneq (,$(filter gcoap,$(USEMODULE)))
   USEMODULE += nanocoap
   USEMODULE += sock_async_event
+  USEMODULE += sock_aux_local
   USEMODULE += sock_udp
   USEMODULE += sock_util
   USEMODULE += ztimer_msec
@@ -659,6 +660,11 @@ ifneq (,$(filter nanocoap_sock,$(USEMODULE)))
   USEMODULE += sock_udp
   USEMODULE += sock_util
   USEMODULE += ztimer_msec
+endif
+
+ifneq (,$(filter nanocoap_cache,$(USEMODULE)))
+  USEMODULE += ztimer_sec
+  USEMODULE += hashes
 endif
 
 ifneq (,$(filter nanocoap_%,$(USEMODULE)))

@@ -112,6 +112,7 @@ bool _consume_port(uri_parser_result_t *result, const char *ipv6_end,
         if (port_begin + 1 == authority_end) {
             return false;
         }
+
         /* Verify that the port number is up to 5 (random) chars in size */
         if (authority_end - (port_begin + 1) > PORT_STR_LEN) {
             return false;
@@ -126,6 +127,7 @@ bool _consume_port(uri_parser_result_t *result, const char *ipv6_end,
         result->port = (uint16_t)port;
         result->port_str = port_begin + 1;
         result->port_str_len = authority_end - result->port_str;
+
         /* cut host part before port and ':' */
         result->host_len -= result->port_str_len + 1;
     }
@@ -309,10 +311,16 @@ int uri_parser_process(uri_parser_result_t *result, const char *uri,
     memset(result, 0, sizeof(*result));
 
     if (uri_parser_is_absolute(uri, uri_len)) {
-        return _parse_absolute(result, uri, uri + uri_len);
+        if (_parse_absolute(result, uri, uri + uri_len) != 0) {
+            memset(result, 0, sizeof(*result));
+            return -1;
+        }
     }
     else {
-        return _parse_relative(result, uri, uri + uri_len);
+        if (_parse_relative(result, uri, uri + uri_len) != 0) {
+            memset(result, 0, sizeof(*result));
+            return -1;
+        }
     }
 
     return 0;
