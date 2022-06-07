@@ -31,7 +31,7 @@ extern "C" {
  * @brief   Default lifetime in seconds (the default is 1 day)
  */
 #ifndef CONFIG_CORD_LT
-#define CONFIG_CORD_LT                 (86400UL)
+#define CONFIG_CORD_LT                 (30UL)
 #endif
 
 /**

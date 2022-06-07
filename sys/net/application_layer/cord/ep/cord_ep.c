@@ -34,7 +34,7 @@
 #include "net/cord/ep_standalone.h"
 #endif
 
-#define ENABLE_DEBUG        0
+#define ENABLE_DEBUG        1
 #include "debug.h"
 
 #define FLAG_SUCCESS        (0x0001)
@@ -43,7 +43,7 @@
 #define FLAG_OVERFLOW       (0x0008)
 #define FLAG_MASK           (0x000f)
 
-#define BUFSIZE             (512U)
+#define BUFSIZE             (1024U)
 
 static char *_regif_buf;
 static size_t _regif_buf_len;
@@ -218,13 +218,16 @@ static int _discover_internal(const sock_udp_ep_t *remote,
     int res = gcoap_req_init(&pkt, buf, sizeof(buf), COAP_METHOD_GET,
                              "/.well-known/core");
     if (res < 0) {
+        printf("init failed: %d\n", res);
         return CORD_EP_ERR;
     }
     coap_hdr_set_type(pkt.hdr, COAP_TYPE_CON);
     coap_opt_add_uri_query(&pkt, "rt", "core.rd");
     size_t pkt_len = coap_opt_finish(&pkt, COAP_OPT_FINISH_NONE);
-    res = gcoap_req_send(buf, pkt_len, remote, _on_discover, NULL);
+    res = gcoap_req_send_tl(buf, pkt_len, remote, _on_discover, NULL, GCOAP_SOCKET_TYPE_UDP);
+//    res = gcoap_req_send(buf, pkt_len, remote, _on_discover, NULL);
     if (res < 0) {
+        printf("can't send: %d\n", res);
         return CORD_EP_ERR;
     }
     return _sync();
@@ -256,11 +259,13 @@ int cord_ep_register(const sock_udp_ep_t *remote, const char *regif)
     if (regif == NULL) {
         retval = _discover_internal(remote, _rd_regif, sizeof(_rd_regif));
         if (retval != CORD_EP_OK) {
+            puts("No internal discover");
             goto end;
         }
     }
     else {
         if (strlen(_rd_regif) >= sizeof(_rd_regif)) {
+            puts("overflow");
             retval = CORD_EP_OVERFLOW;
             goto end;
         }
@@ -270,14 +275,17 @@ int cord_ep_register(const sock_udp_ep_t *remote, const char *regif)
     /* build and send CoAP POST request to the RD's registration interface */
     res = gcoap_req_init(&pkt, buf, sizeof(buf), COAP_METHOD_POST, _rd_regif);
     if (res < 0) {
+        puts("could not build req");
         retval = CORD_EP_ERR;
         goto end;
     }
+
     /* set some packet options and write query string */
     coap_hdr_set_type(pkt.hdr, COAP_TYPE_CON);
     coap_opt_add_uint(&pkt, COAP_OPT_CONTENT_FORMAT, COAP_FORMAT_LINK);
     res = cord_common_add_qstring(&pkt);
     if (res < 0) {
+        puts("couldn add string");
         retval = CORD_EP_ERR;
         goto end;
     }
@@ -288,14 +296,16 @@ int cord_ep_register(const sock_udp_ep_t *remote, const char *regif)
     res = gcoap_get_resource_list(pkt.payload, pkt.payload_len,
                                   COAP_FORMAT_LINK);
     if (res < 0) {
+        puts("could not get resource list");
         retval = CORD_EP_ERR;
         goto end;
     }
     pkt_len += res;
 
     /* send out the request */
-    res = gcoap_req_send(buf, pkt_len, remote, _on_register, NULL);
+    res = gcoap_req_send_tl(buf, pkt_len, remote, _on_register, NULL, GCOAP_SOCKET_TYPE_UDP);
     if (res < 0) {
+        puts("could not send");
         retval = CORD_EP_ERR;
         goto end;
     }
