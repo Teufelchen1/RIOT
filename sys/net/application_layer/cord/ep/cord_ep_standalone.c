@@ -32,7 +32,7 @@
 #include "debug.h"
 
 /* stack configuration */
-#define STACKSIZE           (THREAD_STACKSIZE_DEFAULT)
+#define STACKSIZE           (THREAD_STACKSIZE_DEFAULT*2)
 #define PRIO                (THREAD_PRIORITY_MAIN - 1)
 #define TNAME               "cord_ep"
 
