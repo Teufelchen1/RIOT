@@ -151,7 +151,8 @@ static int _update_remove(unsigned code, gcoap_resp_handler_t handle)
     ssize_t pkt_len = coap_opt_finish(&pkt, COAP_OPT_FINISH_NONE);
 
     /* send request */
-    gcoap_req_send(buf, pkt_len, &_rd_remote, handle, NULL);
+    // gcoap_req_send(buf, pkt_len, &_rd_remote, handle, NULL);
+    gcoap_req_send_tl(buf, pkt_len, &_rd_remote, handle, NULL, GCOAP_SOCKET_TYPE_UDP);
 
     /* synchronize response */
     return _sync();
