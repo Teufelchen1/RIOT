@@ -1,0 +1,29 @@
+# Copyright (c) 2022 Teufelchen1
+#
+# This file is subject to the terms and conditions of the GNU Lesser
+# General Public License v2.1. See the file LICENSE in the top level
+# directory for more details.
+
+menuconfig KCONFIG_USEPKG_STSAFEA
+    bool "Configure STSAFE-A1xx Middleware"
+    help
+        Configure STSAFE-A1xx Middleware using Kconfig.
+
+if KCONFIG_USEPKG_STSAFEA
+
+choice
+    prompt "Select the target device"
+
+config STSAFE_A110
+        bool "Build for the A110 device"
+
+config STSAFE_A100
+        bool "Build for the A100 device"
+
+endchoice
+
+config STSAFEA_I2C_NUM
+    int "Select the I2C device number to which the unit is connected."
+    default 0
+
+endif # KCONFIG_USEPKG_STSAFEA

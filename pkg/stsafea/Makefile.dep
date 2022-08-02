@@ -1,0 +1,9 @@
+# Put the package dependencies here
+USEMODULE += hashes
+USEMODULE += checksum
+USEMODULE += crypto_aes_128
+USEMODULE += cipher_modes
+USEMODULE += xtimer
+USEMODULE += ztimer_msec
+FEATURES_REQUIRED += periph_i2c
+USEMODULE += stsafea_contrib
