@@ -1,0 +1,28 @@
+/**
+ * @defgroup pkg_stsafea   STSAFE-A110
+ * @ingroup  pkg
+ * @brief    This package provides support for the official library for using STSAFE-A110 devices.
+ *
+ * # Introduction
+ *
+ * This package provides support for the official library for using STSAFE-A110/A100 devices.
+ * 
+ * # Setup
+ *
+ * Since the library cannot be downloaded publicly, the user has to provide it.
+ * After downloading and extracting the library, copy over the sub-folder: 
+ * STM32CubeExpansion_STSAFE-A_VX.X.X/Middlewares/ST/STSAFE_Axx0
+ * into the RIOT package root RIOT/pkg/stsafea/
+ *
+ * The user must also specify if the STSAFE_A100 or STSAFE_A110 is being used by including
+ * either pseudo-module e.g. `USEMODULE += STSAFE_A110`
+ *
+ * The connected I2C interface can be specified by defining STSAFEA_I2C_NUM. Default is 0.
+ * e.g. `CFLAGS += -DSTSAFEA_I2C_NUM=2`
+ *
+ * # License
+ *
+ * Licensed under n/a.
+ *
+ * @see      https://www.st.com/content/st_com/en/products/embedded-software/mcu-mpu-embedded-software/stm32-embedded-software/stm32cube-expansion-packages/x-cube-safea1.html
+ */

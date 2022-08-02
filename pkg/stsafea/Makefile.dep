@@ -1,0 +1,10 @@
+# Put the package dependencies here
+USEMODULE += xtimer
+USEMODULE += hashes
+USEMODULE += crypto_aes_128
+USEMODULE += cipher_modes
+FEATURES_REQUIRED += periph_i2c
+USEMODULE += stsafea_contrib
+ifeq (,$(filter STSAFE_A100 STSAFE_A110,$(USEMODULE)))
+  $(error Target element not specified via USEMODULE. The user must specify either STSAFE_A100 or STSAFE_A110)
+endif

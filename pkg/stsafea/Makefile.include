@@ -1,0 +1,14 @@
+PSEUDOMODULES += STSAFE_A100
+PSEUDOMODULES += STSAFE_A110
+
+DIRS += $(RIOTPKG)/stsafea/contrib
+INCLUDES += -I$(RIOTPKG)/stsafea/include
+INCLUDES += -I$(PKGDIRBASE)/stsafea/CoreModules/Inc/
+INCLUDES += -I$(PKGDIRBASE)/stsafea/CoreModules/Src/
+
+ifneq (,$(filter STSAFE_A110,$(USEMODULE)))
+  CFLAGS += -DSTSAFE_A110
+endif
+ifneq (,$(filter STSAFE_A100,$(USEMODULE)))
+  CFLAGS += -DSTSAFE_A100
+endif
