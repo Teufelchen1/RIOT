@@ -15,4 +15,5 @@ $(PKG_SOURCE_LOCAL):
 	$(error $(PKG_SOURCE_DIR) has not been populated by the user! See $(PKG_SOURCE_DIR)/doc.txt )
 
 $(MIDDLEWARE_CONF):
+	mkdir include/
 	cp $(PKG_SOURCE_DIR)/Interface/stsafea_conf_template.h $@
