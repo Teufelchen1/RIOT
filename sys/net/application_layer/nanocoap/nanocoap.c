@@ -27,7 +27,7 @@
 #include <string.h>
 
 #include "bitarithm.h"
-#include "net/nanocoap.h"
+#include "nanocoap_internal.h"
 
 #define ENABLE_DEBUG 0
 #include "debug.h"
@@ -69,6 +69,7 @@ int coap_parse(coap_pkt_t *pkt, uint8_t *buf, size_t len)
     pkt->payload = NULL;
     pkt->payload_len = 0;
     memset(pkt->opt_crit, 0, sizeof(pkt->opt_crit));
+    pkt->snips = NULL;
 
     if (len < sizeof(coap_hdr_t)) {
         DEBUG("msg too short\n");
@@ -366,7 +367,7 @@ ssize_t coap_opt_get_string(coap_pkt_t *pkt, uint16_t optnum,
     return (int)(max_len - left);
 }
 
-int coap_get_blockopt(coap_pkt_t *pkt, uint16_t option, uint32_t *blknum, unsigned *szx)
+int coap_get_blockopt(coap_pkt_t *pkt, uint16_t option, uint32_t *blknum, uint8_t *szx)
 {
     uint8_t *optpos = coap_find_option(pkt, option);
     if (!optpos) {
@@ -425,10 +426,10 @@ ssize_t coap_handle_req(coap_pkt_t *pkt, uint8_t *resp_buf, unsigned resp_buf_le
 }
 
 ssize_t coap_subtree_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len,
-                             void *context)
+                             coap_request_ctx_t *context)
 {
     assert(context);
-    coap_resource_subtree_t *subtree = context;
+    coap_resource_subtree_t *subtree = coap_request_ctx_get_context(context);
     return coap_tree_handler(pkt, buf, len, subtree->resources,
                              subtree->resources_numof);
 }
@@ -460,7 +461,11 @@ ssize_t coap_tree_handler(coap_pkt_t *pkt, uint8_t *resp_buf,
             break;
         }
         else {
-            return resource->handler(pkt, resp_buf, resp_buf_len, resource->context);
+            coap_request_ctx_t ctx = {
+                .resource = resource,
+                .context  = resource->context,
+            };
+            return resource->handler(pkt, resp_buf, resp_buf_len, &ctx);
         }
     }
 
@@ -1109,7 +1114,7 @@ void coap_block_slicer_init(coap_block_slicer_t *slicer, size_t blknum,
 void coap_block2_init(coap_pkt_t *pkt, coap_block_slicer_t *slicer)
 {
     uint32_t blknum = 0;
-    unsigned szx = 0;
+    uint8_t szx = 0;
 
     /* Retrieve the block2 option from the client request */
     if (coap_get_blockopt(pkt, COAP_OPT_BLOCK2, &blknum, &szx) >= 0) {
@@ -1195,7 +1200,7 @@ size_t coap_blockwise_put_bytes(coap_block_slicer_t *slicer, uint8_t *bufpos,
 }
 
 ssize_t coap_well_known_core_default_handler(coap_pkt_t *pkt, uint8_t *buf, \
-                                             size_t len, void *context)
+                                             size_t len, coap_request_ctx_t *context)
 {
     (void)context;
     coap_block_slicer_t slicer;
@@ -1230,4 +1235,24 @@ unsigned coap_get_len(coap_pkt_t *pkt)
         pktlen += pkt->payload_len + 1;
     }
     return pktlen;
+}
+
+const char *coap_request_ctx_get_path(const coap_request_ctx_t *ctx)
+{
+    return ctx->resource->path;
+}
+
+void *coap_request_ctx_get_context(const coap_request_ctx_t *ctx)
+{
+    return ctx->context;
+}
+
+uint32_t coap_request_ctx_get_tl_type(const coap_request_ctx_t *ctx)
+{
+#ifdef MODULE_GCOAP
+    return ctx->tl_type;
+#else
+    (void)ctx;
+    return 0;
+#endif
 }

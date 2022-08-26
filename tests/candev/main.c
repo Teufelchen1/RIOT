@@ -219,12 +219,36 @@ if (IS_ACTIVE(CONFIG_USE_LOOPBACK_MODE)) {
     /* set to loopback test mode */
     canopt_state_t mode = CANOPT_STATE_LOOPBACK;
     candev->driver->set(candev, CANOPT_STATE, &mode, sizeof(mode));
-
-    /* do not care, receive all message id */
-    struct can_filter filter;
-    filter.can_mask = 0;
-    candev->driver->set_filter(candev, &filter);
 }
+
+    if (IS_ACTIVE(MCP2515_RECV_FILTER_EN)) {
+        /* CAN filters examples */
+        struct can_filter filter[4];
+        filter[0].can_mask = 0x7FF;
+        filter[0].can_id = 0x001;
+#if defined(MODULE_MCP2515)
+        filter[0].target_mailbox = 0;   /* messages with CAN ID 0x001 will be received in mailbox 0 */
+#endif
+        filter[1].can_mask = 0x7FF;
+        filter[1].can_id = 0x002;
+#if defined(MODULE_MCP2515)
+        filter[1].target_mailbox = 1;   /* messages with CAN ID 0x002 will be received in mailbox 1 */
+#endif
+        filter[2].can_mask = 0x7FF;
+        filter[2].can_id = 0x003;
+#if defined(MODULE_MCP2515)
+        filter[2].target_mailbox = 0;   /* messages with CAN ID 0x003 will be received in mailbox 0 */
+#endif
+        filter[3].can_mask = 0x7FF;
+        filter[3].can_id = 0x004;
+#if defined(MODULE_MCP2515)
+        filter[3].target_mailbox = 0;   /* this filter won't be applied. Reason is no space found in the first mailbox as it supports only two filters */
+#endif
+        for (uint8_t i = 0; i < 4; i++) {
+            candev->driver->set_filter(candev, &filter[i]);
+        }
+        /* All other messages won't be received */
+    }
 
     char line_buf[SHELL_DEFAULT_BUFSIZE];
     shell_run(shell_commands, line_buf, SHELL_DEFAULT_BUFSIZE);

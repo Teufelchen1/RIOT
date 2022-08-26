@@ -20,6 +20,8 @@
  * @}
  */
 
+#include <stdio.h>
+
 #include "fmt.h"
 
 int main(void)
@@ -43,7 +45,13 @@ int main(void)
     print_str("\n");
     print_float(1.2345, 5);
     print_str("\n");
-    print_str("Test successful.\n");
+    /* test mixing of printf() and fmt's print() works fine */
+    printf("%s", "Test");
+    /* test fmt's print indeed only honors the length parameter and doesn't
+     * print until the terminated zero byte */
+    print(" not ", 1);
+    print_str("successful.");
+    puts("");
 
     return 0;
 }

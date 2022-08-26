@@ -251,18 +251,6 @@ typedef enum {
     NETOPT_RX_START_IRQ,
 
     /**
-     * @brief   (@ref netopt_enable_t) Used to check if the driver generates
-     *          NETDEV_EVENT_RX_COMPLETE events
-     *
-     * This interrupt is triggered after a complete frame is received.
-     *
-     * @note    In case a transceiver does not support this interrupt, the event
-     *          may be triggered by the driver
-     * @warning This value is read-only and cannot be configured at run-time
-     */
-    NETOPT_RX_END_IRQ,
-
-    /**
      * @brief   (@ref netopt_enable_t) Used to check if the driver generates NETDEV_EVENT_TX_STARTED
      *          events
      *
@@ -403,11 +391,12 @@ typedef enum {
     NETOPT_CCA_MODE,
 
     /**
-     * @brief   (@ref netstats_t*) get statistics about sent and received packets and data of the
-     *          device or protocol
+     * @brief   (@ref netstats_t) get statistics about sent and received packets
+     *          and data of the device or protocol
      *
-     * Expects a pointer to a @ref netstats_t struct that will be pointed to
-     * the corresponding @ref netstats_t of the module.
+     * A get operation expects a @ref netstats_t and will copy the current
+     * statistics into it, atomically. A set operation resets the statistics
+     * (zeros it out) regardless of the parameter given.
      */
     NETOPT_STATS,
 

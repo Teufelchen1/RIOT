@@ -128,7 +128,7 @@ extern "C" {
 #endif
 
 #define FATFS_VFS_DIR_BUFFER_SIZE       (44 + _FATFS_DIR_LFN + _FATFS_DIR_EXFAT)
-#define FATFS_VFS_FILE_BUFFER_SIZE      (72 + _FATFS_FILE_CACHE + _FATFS_FILE_SEEK_PTR + _FATFS_FILE_EXFAT)
+#define FATFS_VFS_FILE_BUFFER_SIZE      (41 + VFS_NAME_MAX + _FATFS_FILE_CACHE + _FATFS_FILE_SEEK_PTR + _FATFS_FILE_EXFAT)
 #else
 #define FATFS_VFS_DIR_BUFFER_SIZE       (1)
 #define FATFS_VFS_FILE_BUFFER_SIZE      (1)
@@ -795,6 +795,9 @@ int vfs_open(const char *name, int flags, mode_t mode);
  *
  * @return number of bytes read on success
  * @return <0 on error
+ *
+ * For simple cases of only a single read from a file, the @ref
+ * vfs_file_to_buffer function can be used.
  */
 ssize_t vfs_read(int fd, void *dest, size_t count);
 
@@ -807,6 +810,9 @@ ssize_t vfs_read(int fd, void *dest, size_t count);
  *
  * @return number of bytes written on success
  * @return <0 on error
+ *
+ * For simple cases of only a single write to a file, the @ref
+ * vfs_file_from_buffer function can be used.
  */
 ssize_t vfs_write(int fd, const void *src, size_t count);
 
@@ -893,6 +899,21 @@ int vfs_closedir(vfs_DIR *dirp);
 int vfs_format(vfs_mount_t *mountp);
 
 /**
+ * @brief Format a file system
+ *
+ * The file system must not be mounted in order to be formatted.
+ * Call @ref vfs_unmount_by_path first if necessary.
+ *
+ * @note This assumes mount points have been configured with @ref VFS_AUTO_MOUNT.
+ *
+ * @param[in]  path     Path of the pre-configured mount point
+ *
+ * @return 0 on success
+ * @return <0 on error
+ */
+int vfs_format_by_path(const char *path);
+
+/**
  * @brief Mount a file system
  *
  * @p mountp should have been populated in advance with a file system driver,
@@ -919,6 +940,18 @@ int vfs_mount(vfs_mount_t *mountp);
  * @return <0 on error
  */
 int vfs_mount_by_path(const char *path);
+
+/**
+ * @brief Unmount a file system with a pre-configured mount path
+ *
+ * @note This assumes mount points have been configured with @ref VFS_AUTO_MOUNT.
+ *
+ * @param[in]  path     Path of the pre-configured mount point
+ *
+ * @return 0 on success
+ * @return <0 on error
+ */
+int vfs_unmount_by_path(const char *path);
 
 /**
  * @brief Rename a file

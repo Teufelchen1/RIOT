@@ -1,6 +1,6 @@
 MODULE = shell_commands
 
-SRC = shell_commands.c sc_sys.c
+SRC = sc_sys.c
 
 ifneq (,$(filter app_metadata,$(USEMODULE)))
   SRC += sc_app_metadata.c
@@ -63,9 +63,7 @@ ifneq (,$(filter gnrc_ipv6_blacklist,$(USEMODULE)))
   SRC += sc_blacklist.c
 endif
 ifneq (,$(filter gnrc_icmpv6_echo,$(USEMODULE)))
-ifneq (,$(filter xtimer,$(USEMODULE)))
   SRC += sc_gnrc_icmpv6_echo.c
-endif
 endif
 ifneq (,$(filter gnrc_pktbuf_cmd,$(USEMODULE)))
     SRC += sc_gnrc_pktbuf.c
@@ -106,7 +104,7 @@ ifneq (,$(filter lwip_netif,$(USEMODULE)))
   SRC += sc_lwip_netif.c
 endif
 
-ifneq (,$(filter periph_rtc,$(USEMODULE)))
+ifneq (,$(filter rtt_rtc periph_rtc,$(USEMODULE)))
   SRC += sc_rtc.c
 endif
 
@@ -122,6 +120,10 @@ ifneq (,$(filter semtech-loramac,$(USEPKG)))
   SRC += sc_loramac.c
 endif
 
+ifneq (,$(filter nanocoap_vfs,$(USEMODULE)))
+  SRC += sc_nanocoap_vfs.c
+endif
+
 ifneq (,$(filter nimble_netif,$(USEMODULE)))
   SRC += sc_nimble_netif.c
 endif
@@ -130,7 +132,7 @@ ifneq (,$(filter nimble_statconn,$(USEMODULE)))
   SRC += sc_nimble_statconn.c
 endif
 
-ifneq (,$(filter suit_transport_coap,$(USEMODULE)))
+ifneq (,$(filter suit_transport_worker,$(USEMODULE)))
   SRC += sc_suit.c
 endif
 

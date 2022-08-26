@@ -1,6 +1,6 @@
 PKG_NAME    = nimble
 PKG_URL     = https://github.com/apache/mynewt-nimble.git
-PKG_VERSION = bc142016bdef082ba7997aea09aec1c1e4db0104
+PKG_VERSION = 719bd3c435b728f07ce7aaffaf6cebbd9c659a46
 PKG_LICENSE = Apache-2.0
 
 include $(RIOTBASE)/pkg/pkg.mk
@@ -38,7 +38,14 @@ nimble_porting_nimble:
 	$(QQ)"$(MAKE)" -C $(PDIR)/porting/nimble/src/ -f $(RIOTPKG)/$(PKG_NAME)/nimble.porting.mk MODULE=$@
 
 nimble_npl_riot:
-	$(QQ)"$(MAKE)" -C $(PDIR)/porting/npl/riot/src/ -f $(RIOTBASE)/Makefile.base MODULE=$@
+	$(QQ)"$(MAKE)" -C $(PDIR)/porting/npl/riot/src/ -f $(RIOTPKG)/$(PKG_NAME)/nimble.npl.mk MODULE=$@
+
+# generic modules
+nimble_transport:
+	$(QQ)"$(MAKE)" -C $(PDIR)/nimble/transport/src/ -f $(RIOTBASE)/Makefile.base MODULE=$@
+
+nimble_transport_hci_h4:
+	$(QQ)"$(MAKE)" -C $(PDIR)/nimble/transport/common/hci_h4/src/ -f $(RIOTBASE)/Makefile.base MODULE=$@
 
 # host modules
 nimble_host:
@@ -61,9 +68,6 @@ nimble_svc_ipss:
 	$(QQ)"$(MAKE)" -C $(PDIR)/nimble/host/services/ipss/src/ -f $(RIOTBASE)/Makefile.base MODULE=$@
 
 # controller specific modules
-nimble_transport_ram:
-	$(QQ)"$(MAKE)" -C $(PDIR)/nimble/transport/ram/src/ -f $(RIOTBASE)/Makefile.base MODULE=$@
-
 nimble_controller:
 	$(QQ)"$(MAKE)" -C $(PDIR)/nimble/controller/src/ -f $(RIOTBASE)/Makefile.base MODULE=$@
 

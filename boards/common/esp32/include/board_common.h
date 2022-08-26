@@ -35,7 +35,7 @@
 #endif
 
 #include "periph/gpio.h"
-#include "sdk_conf.h"
+#include "sdkconfig.h"
 
 #if MODULE_MTD
 #include "mtd.h"
@@ -132,28 +132,6 @@ extern mtd_dev_t *mtd0;
 /** @} */
 #endif /* MODULE_MTD || DOXYGEN */
 
-#if MODULE_SPIFFS || DOXYGEN
-/**
- * @name    SPIFFS configuration for the system MTD device
- *
- * Configuration of the SPIFFS that can be used on the system MTD device.
- * @{
- */
-#define SPIFFS_ALIGNED_OBJECT_INDEX_TABLES 1
-#define SPIFFS_READ_ONLY 0
-#define SPIFFS_SINGLETON 0
-#define SPIFFS_HAL_CALLBACK_EXTRA 1
-#define SPIFFS_CACHE 1
-/** @} */
-#endif /* MODULE_SPIFFS || DOXYGEN */
-
-/**
- * @brief Initialize the hardware that is common for all ESP32 boards.
- *
- * This function has to be called from the board specific `board_init` function.
- */
-void board_init_common(void);
-
 /**
   * @brief Print the board configuration in a human readable format
   */
@@ -170,9 +148,6 @@ void print_board_config(void);
 #ifdef __cplusplus
 extern "C"
 #endif
-
-/* declaration of `board_init_common` is required when compiling vendor code */
-extern void board_init_common(void);
 
 #ifdef __cplusplus
 }

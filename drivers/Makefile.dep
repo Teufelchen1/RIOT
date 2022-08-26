@@ -237,10 +237,16 @@ ifneq (,$(filter periph_timer_periodic,$(USEMODULE)))
   FEATURES_REQUIRED += periph_timer
 endif
 
-ifneq (,$(filter-out netdev_default, $(filter netdev_%,$(USEMODULE))))
+ifneq (,$(filter-out netdev_default netdev_new_api netdev_legacy_api, $(filter netdev_%,$(USEMODULE))))
   USEMODULE += netdev
   # Don't register netdevs if there is only a single one of them
   ifeq (,$(filter gnrc_netif_single,$(USEMODULE)))
     USEMODULE += netdev_register
+  endif
+endif
+
+ifneq (,$(filter gnrc_netif_timestamp,$(USEMODULE)))
+  ifneq (,$(filter netdev_ieee802154,$(USEMODULE)))
+    USEMODULE += netdev_ieee802154_rx_timestamp
   endif
 endif

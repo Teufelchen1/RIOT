@@ -38,7 +38,19 @@ int mtd_init(mtd_dev_t *mtd)
 
     if (mtd->driver->init) {
         res = mtd->driver->init(mtd);
+        if (res < 0) {
+            return res;
+        }
     }
+
+    /* Drivers preceding the introduction of write_size need to set it. While
+     * this assert breaks applications that previously worked, it is likely
+     * that these applications silently assumed a certain write size and would
+     * break when switching the MTD backend. When tripping over this assert,
+     * please update your driver to produce a correct value *and* place a check
+     * in your application for whether the backend allows sufficiently small
+     * writes. */
+    assert(mtd->write_size != 0);
 
 #ifdef MODULE_MTD_WRITE_PAGE
     if ((mtd->driver->flags & MTD_DRIVER_FLAG_DIRECT_WRITE) == 0) {
@@ -94,6 +106,7 @@ int mtd_read_page(mtd_dev_t *mtd, void *dest, uint32_t page, uint32_t offset,
     const uint32_t page_shift = bitarithm_msb(mtd->page_size);
     const uint32_t page_mask = mtd->page_size - 1;
 
+    /* ensure offset is within a page */
     page  += offset >> page_shift;
     offset = offset & page_mask;
 
@@ -252,6 +265,7 @@ int mtd_write_page_raw(mtd_dev_t *mtd, const void *src, uint32_t page, uint32_t 
     const uint32_t page_shift = bitarithm_msb(mtd->page_size);
     const uint32_t page_mask = mtd->page_size - 1;
 
+    /* ensure offset is within a page */
     page  += offset >> page_shift;
     offset = offset & page_mask;
 

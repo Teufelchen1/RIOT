@@ -4,6 +4,7 @@ FLASH_ADDR ?= 0x0
 export Q                     # Used in front of Makefile lines to suppress the printing of the command if user did not opt-in to see them.
 export QQ                    # as Q, but be more quiet
 export QUIET                 # The parameter to use whether to show verbose makefile commands or not.
+export QUIETER               # The parameter to use to hide most makefile output
 
 export OS                    # The operating system of the build host
 export OS_ARCH               # The build host's hardware architecture
@@ -131,3 +132,8 @@ export AFL_FLAGS             # Additional command-line flags passed to afl durin
 # LOG_LEVEL                  # Logging level as integer (NONE: 0, ERROR: 1, WARNING: 2, INFO: 3, DEBUG: 4, default: 3)
 # KCONFIG_ADD_CONFIG         # List of .config files to be merged used by Boards and CPUs. See kconfig.mk
 # VERBOSE_ASSERT             # Set to 1 to print the file and line of a failed assert when assertions blow
+
+export RUST_TARGET           # Rust's own version of the target triple / quadruple.
+                             #
+                             # It is set by the architecture (and thus eventually the CPU), and exported to
+                             # be available when building Rust modules.

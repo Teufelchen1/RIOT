@@ -186,25 +186,35 @@ int gnrc_netif_get_from_netdev(gnrc_netif_t *netif, gnrc_netapi_opt_t *opt)
             res = sizeof(uint8_t);
             break;
         case NETOPT_STATS:
-            /* XXX discussed this with Oleg, it's supposed to be a pointer */
             switch ((int16_t)opt->context) {
 #if IS_USED(MODULE_NETSTATS_IPV6) && IS_USED(MODULE_GNRC_NETIF_IPV6)
-                case NETSTATS_IPV6:
-                    assert(opt->data_len == sizeof(netstats_t *));
-                    *((netstats_t **)opt->data) = &netif->ipv6.stats;
-                    res = sizeof(&netif->ipv6.stats);
-                    break;
+            case NETSTATS_IPV6:
+                {
+                    assert(opt->data_len == sizeof(netstats_t));
+                    /* IPv6 thread is updating this, to prevent data
+                     * corruptions, we have to guarantee mutually exclusive
+                     * access */
+                    unsigned irq_state = irq_disable();
+                    memcpy(opt->data, &netif->ipv6.stats,
+                           sizeof(netif->ipv6.stats));
+                    irq_restore(irq_state);
+                    res = sizeof(netif->ipv6.stats);
+                }
+                break;
 #endif
 #ifdef MODULE_NETSTATS_L2
-                case NETSTATS_LAYER2:
-                    assert(opt->data_len == sizeof(netstats_t *));
-                    *((netstats_t **)opt->data) = &netif->stats;
-                    res = sizeof(&netif->stats);
-                    break;
+            case NETSTATS_LAYER2:
+                assert(opt->data_len == sizeof(netstats_t));
+                /* this is only accesses from the netif thread (us), so no need
+                 * to lock this */
+                memcpy(opt->data, &netif->stats,
+                       sizeof(netif->stats));
+                res = sizeof(netif->stats);
+                break;
 #endif
-                default:
-                    /* take from device */
-                    break;
+            default:
+                /* take from device */
+                break;
             }
             break;
 #if IS_USED(MODULE_GNRC_NETIF_IPV6)
@@ -413,6 +423,33 @@ int gnrc_netif_set_from_netdev(gnrc_netif_t *netif,
                                       opt->data_len);
             res = sizeof(netopt_enable_t);
             break;
+        case NETOPT_STATS:
+            switch ((int16_t)opt->context) {
+#if IS_USED(MODULE_NETSTATS_IPV6) && IS_USED(MODULE_GNRC_NETIF_IPV6)
+            case NETSTATS_IPV6:
+                {
+                    /* IPv6 thread is updating this, to prevent data
+                     * corruptions, we have to guarantee mutually exclusive
+                     * access */
+                    unsigned irq_state = irq_disable();
+                    memset(&netif->ipv6.stats, 0, sizeof(netif->ipv6.stats));
+                    irq_restore(irq_state);
+                    res = 0;
+                }
+                break;
+#endif
+#ifdef MODULE_NETSTATS_L2
+            case NETSTATS_LAYER2:
+                /* this is only accesses from the netif thread (us), so no need
+                 * to lock this */
+                memset(&netif->stats, 0, sizeof(netif->stats));
+                res = 0;
+                break;
+#endif
+            default:
+                /* take from device */
+                break;
+            }
         default:
             break;
     }
@@ -1287,10 +1324,12 @@ int gnrc_netif_ipv6_add_prefix(gnrc_netif_t *netif,
         IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C) &&
         gnrc_netif_is_6ln(netif)) {
 
-        /* configure compression context */
-        if (gnrc_sixlowpan_ctx_update_6ctx(pfx, pfx_len, valid)) {
-            DEBUG("gnrc_netif: add compression context for prefix %s/%u\n",
-                   ipv6_addr_to_str(addr_str, pfx, sizeof(addr_str)), pfx_len);
+        if (IS_ACTIVE(CONFIG_GNRC_NETIF_IPV6_BR_AUTO_6CTX)) {
+            /* configure compression context */
+            if (gnrc_sixlowpan_ctx_update_6ctx(pfx, pfx_len, valid)) {
+                DEBUG("gnrc_netif: add compression context for prefix %s/%u\n",
+                       ipv6_addr_to_str(addr_str, pfx, sizeof(addr_str)), pfx_len);
+            }
         }
 
         (void)gnrc_ipv6_nib_abr_add(&addr);
@@ -1439,13 +1478,9 @@ static void _check_netdev_capabilities(netdev_t *dev)
 {
     /* Check whether RX- and TX-complete interrupts are supported by the driver */
     if (IS_ACTIVE(DEVELHELP)) {
-        netopt_enable_t enable = NETOPT_ENABLE;
-        int res = dev->driver->get(dev, NETOPT_RX_END_IRQ, &enable, sizeof(enable));
-        if ((res != sizeof(enable)) || (enable != NETOPT_ENABLE)) {
-            LOG_WARNING("NETOPT_RX_END_IRQ not implemented by driver\n");
-        }
         if (IS_USED(MODULE_NETSTATS_L2) || IS_USED(MODULE_GNRC_NETIF_PKTQ)) {
-            res = dev->driver->get(dev, NETOPT_TX_END_IRQ, &enable, sizeof(enable));
+            netopt_enable_t enable = NETOPT_ENABLE;
+            int res = dev->driver->get(dev, NETOPT_TX_END_IRQ, &enable, sizeof(enable));
             if ((res != sizeof(enable)) || (enable != NETOPT_ENABLE)) {
                 LOG_WARNING("NETOPT_TX_END_IRQ not implemented by driver\n");
             }
@@ -1600,12 +1635,14 @@ int gnrc_netif_default_init(gnrc_netif_t *netif)
 #ifdef MODULE_GNRC_IPV6_NIB
     gnrc_ipv6_nib_init_iface(netif);
 #endif
+#if DEVELHELP
+    assert(options_tested);
+#endif
     return 0;
 }
 
 static void _send(gnrc_netif_t *netif, gnrc_pktsnip_t *pkt, bool push_back);
 
-#if IS_USED(MODULE_GNRC_NETIF_EVENTS)
 /**
  * @brief   Call the ISR handler from an event
  *
@@ -1615,16 +1652,6 @@ static void _event_handler_isr(event_t *evp)
 {
     gnrc_netif_t *netif = container_of(evp, gnrc_netif_t, event_isr);
     netif->dev->driver->isr(netif->dev);
-}
-#endif
-
-static inline void _event_post(gnrc_netif_t *netif)
-{
-#if IS_USED(MODULE_GNRC_NETIF_EVENTS)
-    event_post(&netif->evq, &netif->event_isr);
-#else
-    (void)netif;
-#endif
 }
 
 static void _process_receive_stats(gnrc_netif_t *netdev, gnrc_pktsnip_t *pkt)
@@ -1648,22 +1675,16 @@ static void _process_receive_stats(gnrc_netif_t *netdev, gnrc_pktsnip_t *pkt)
     netstats_nb_update_rx(&netdev->netif, src, src_len, hdr->rssi, hdr->lqi);
 }
 
-/**
- * @brief   Retrieve the netif event queue if enabled
- *
- * @param[in]   netif   gnrc_netif instance to operate on
- *
- * @return              NULL if MODULE_GNRC_NETIF_EVENTS is not enabled
- * @return              gnrc_netif_t::evq if MODULE_GNRC_NETIF_EVENTS is enabled
- */
-static inline event_queue_t *_get_evq(gnrc_netif_t *netif)
+static event_t *_gnrc_netif_fetch_event(gnrc_netif_t *netif)
 {
-#ifdef MODULE_GNRC_NETIF_EVENTS
-    return &netif->evq;
-#else
-    (void)netif;
+    event_t *ev;
+    /* Iterate from highest priority to lowest priority */
+    for (int i = 0; i < GNRC_NETIF_EVQ_NUMOF; i++) {
+        if ((ev = event_get(&netif->evq[i]))) {
+            return ev;
+        }
+    }
     return NULL;
-#endif
 }
 
 /**
@@ -1679,37 +1700,29 @@ static inline event_queue_t *_get_evq(gnrc_netif_t *netif)
  */
 static void _process_events_await_msg(gnrc_netif_t *netif, msg_t *msg)
 {
-    if (IS_USED(MODULE_GNRC_NETIF_EVENTS)) {
-        while (1) {
-            /* Using messages for external IPC, and events for internal events */
+    while (1) {
+        /* Using messages for external IPC, and events for internal events */
 
-            /* First drain the queues before blocking the thread */
-            /* Events will be handled before messages */
-            DEBUG("gnrc_netif: handling events\n");
-            event_t *evp;
-            /* We can not use event_loop() or event_wait() because then we would not
-             * wake up when a message arrives */
-            event_queue_t *evq = _get_evq(netif);
-            while ((evp = event_get(evq))) {
-                DEBUG("gnrc_netif: event %p\n", (void *)evp);
-                if (evp->handler) {
-                    evp->handler(evp);
-                }
+        /* First drain the queues before blocking the thread */
+        /* Events will be handled before messages */
+        DEBUG("gnrc_netif: handling events\n");
+        event_t *evp;
+        /* We can not use event_loop() or event_wait() because then we would not
+         * wake up when a message arrives */
+        while ((evp = _gnrc_netif_fetch_event(netif))) {
+            DEBUG("gnrc_netif: event %p\n", (void *)evp);
+            if (evp->handler) {
+                evp->handler(evp);
             }
-            /* non-blocking msg check */
-            int msg_waiting = msg_try_receive(msg);
-            if (msg_waiting > 0) {
-                return;
-            }
-            DEBUG("gnrc_netif: waiting for events\n");
-            /* Block the thread until something interesting happens */
-            thread_flags_wait_any(THREAD_FLAG_MSG_WAITING | THREAD_FLAG_EVENT);
         }
-    }
-    else {
-        /* Only messages used for event handling */
-        DEBUG("gnrc_netif: waiting for incoming messages\n");
-        msg_receive(msg);
+        /* non-blocking msg check */
+        int msg_waiting = msg_try_receive(msg);
+        if (msg_waiting > 0) {
+            return;
+        }
+        DEBUG("gnrc_netif: waiting for events\n");
+        /* Block the thread until something interesting happens */
+        thread_flags_wait_any(THREAD_FLAG_MSG_WAITING | THREAD_FLAG_EVENT);
     }
 }
 
@@ -1831,7 +1844,6 @@ static void *_gnrc_netif_thread(void *args)
     _netif_ctx_t *ctx = args;
     gnrc_netapi_opt_t *opt;
     gnrc_netif_t *netif;
-    netdev_t *dev;
     int res;
     msg_t reply = { .type = GNRC_NETAPI_MSG_TYPE_ACK };
     msg_t msg_queue[GNRC_NETIF_MSG_QUEUE_SIZE];
@@ -1841,11 +1853,9 @@ static void *_gnrc_netif_thread(void *args)
     gnrc_netif_acquire(netif);
     netif->pid = thread_getpid();
 
-#if IS_USED(MODULE_GNRC_NETIF_EVENTS)
     netif->event_isr.handler = _event_handler_isr,
     /* set up the event queue */
-    event_queue_init(&netif->evq);
-#endif /* MODULE_GNRC_NETIF_EVENTS */
+    event_queues_init(netif->evq, GNRC_NETIF_EVQ_NUMOF);
 
     /* setup the link-layer's message queue */
     msg_init_queue(msg_queue, GNRC_NETIF_MSG_QUEUE_SIZE);
@@ -1857,10 +1867,6 @@ static void *_gnrc_netif_thread(void *args)
         LOG_ERROR("gnrc_netif: init failed: %d\n", ctx->result);
         return NULL;
     }
-    dev = netif->dev;
-#if DEVELHELP
-    assert(options_tested);
-#endif
 #ifdef MODULE_NETSTATS_L2
     memset(&netif->stats, 0, sizeof(netstats_t));
 #endif
@@ -1885,10 +1891,6 @@ static void *_gnrc_netif_thread(void *args)
                 _send_queued_pkt(netif);
                 break;
 #endif  /* IS_USED(MODULE_GNRC_NETIF_PKTQ) */
-            case NETDEV_MSG_TYPE_EVENT:
-                DEBUG("gnrc_netif: GNRC_NETDEV_MSG_TYPE_EVENT received\n");
-                dev->driver->isr(dev);
-                break;
             case GNRC_NETAPI_MSG_TYPE_SND:
                 DEBUG("gnrc_netif: GNRC_NETDEV_MSG_TYPE_SND received\n");
                 _send(netif, msg.content.ptr, false);
@@ -1966,17 +1968,7 @@ static void _event_cb(netdev_t *dev, netdev_event_t event)
     gnrc_netif_t *netif = (gnrc_netif_t *) dev->context;
 
     if (event == NETDEV_EVENT_ISR) {
-        if (IS_USED(MODULE_GNRC_NETIF_EVENTS)) {
-            _event_post(netif);
-        }
-        else {
-            msg_t msg = { .type = NETDEV_MSG_TYPE_EVENT,
-                          .content = { .ptr = netif } };
-
-            if (msg_send(&msg, netif->pid) <= 0) {
-                puts("gnrc_netif: possibly lost interrupt.");
-            }
-        }
+        event_post(&netif->evq[GNRC_NETIF_EVQ_INDEX_PRIO_LOW], &netif->event_isr);
     }
     else {
         DEBUG("gnrc_netif: event triggered -> %i\n", event);

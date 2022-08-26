@@ -1,25 +1,27 @@
-# Rust's own version of the target triple / quadruple.
-#
-# This does not have a sane default, and needs to be set in the architecture
-# files.
-# RUST_TARGET = ...
-
-# Flags that need to be added to the RIOT_CFLAGS passed to cargo in order to
-# make bindgen happy
-CARGO_EXTRACFLAGS ?=
-
 # Setting anything other than "debug" or "release" will necessitate additional
 # -Z unstable-options as of 2021-03 nightlies.
 CARGO_PROFILE ?= release
 
+# Value for CARGO_CHANNEL when using nightly
+#
+# As different environments have different versions of nightly installed, but
+# rustup / cargo does not take "the latest installed nightly" for a toolchain,
+# a good value is determined dynamically. Typical values this takes are
+# `nightly` (on regular installations) and `nightly-2022-03-08` (or whichever
+# date it is currently pinned to) in riotbuild.
+#
+# Workaround-For: https://github.com/rust-lang/rustup/issues/3015
+#
+# This does not get evaluated unless actually used; if rustup is not installed,
+# the default value will likely not be usable but at least set the user on the
+# right track.
+CARGO_CHANNEL_NIGHTLY = $(shell rustup toolchain list | sed 's/ .*//' |grep nightly | tail -n1 || echo nightly)
+
 # The Rust version to use.
 #
-# As long as C2Rust and riot-wrappers require nightly, the only alternative
-# here is to pick a particular nightly when something breaks.
-#
-# (Default is empty, because the riotbuild container picks a particular nightly
-# and sets it as a default; users without a nightly default need to either
-# override this here or in rustup)
+# Examples should set this to either `stable` or `$(CARGO_CHANNEL_NIGHTLY)`.
+# The default is empty, which is suitable for applications that select their
+# version through a `rust-toolchain.yaml` file.
 CARGO_CHANNEL ?=
 
 # Note that if we did not set this explicitly, CARGO_LIB would have to

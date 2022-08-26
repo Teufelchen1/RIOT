@@ -70,9 +70,9 @@ static void test_nanocoap_cache__cachekey(void)
     nanocoap_cache_key_generate((const coap_pkt_t *) &pkt2, digest2);
 
     /* compare 1. and 3. packet */
-    TEST_ASSERT_EQUAL_INT(-1, nanocoap_cache_key_compare(digest1, digest2));
+    TEST_ASSERT(nanocoap_cache_key_compare(digest1, digest2) < 0);
     /* compare 3. and 1. packet */
-    TEST_ASSERT_EQUAL_INT(1,  nanocoap_cache_key_compare(digest2, digest1));
+    TEST_ASSERT(nanocoap_cache_key_compare(digest2, digest1) > 0);
 }
 static void test_nanocoap_cache__add(void)
 {
@@ -231,7 +231,7 @@ static void test_nanocoap_cache__max_age(void)
     /* the absolute time of max-age should be at approx. now + 30 sec
        (1 sec buffer) */
     now = ztimer_now(ZTIMER_SEC);
-    TEST_ASSERT(c->max_age < (now + 31));
+    TEST_ASSERT(nanocoap_cache_entry_is_stale(c, now + 31));
 
     /* delete previously added cache entry */
     nanocoap_cache_del(c);
@@ -251,7 +251,10 @@ static void test_nanocoap_cache__max_age(void)
     /* the absolute time of max-age should be at approx. now + 60 sec
        (1 sec buffer) */
     now = ztimer_now(ZTIMER_SEC);
-    TEST_ASSERT(c->max_age < (now + 61));
+    TEST_ASSERT(nanocoap_cache_entry_is_stale(c, now + 61));
+    /* check overflow cases */
+    c->max_age = UINT32_MAX - 40;
+    TEST_ASSERT(nanocoap_cache_entry_is_stale(c, 20));
 }
 
 Test *tests_nanocoap_cache_tests(void)

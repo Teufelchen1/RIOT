@@ -94,6 +94,11 @@ void nanocoap_cache_key_generate(const coap_pkt_t *req, uint8_t *cache_key)
     for (unsigned i = 0; i < req->options_len; i++) {
         ssize_t optlen = coap_opt_get_next(req, &opt, &value, !i);
         if (optlen >= 0) {
+            /* gCoAP forward proxy is ETag-aware, so skip ETag option,
+             * see https://datatracker.ietf.org/doc/html/rfc7252#section-5.4.2 */
+            if (IS_USED(MODULE_GCOAP_FORWARD_PROXY) && (opt.opt_num == COAP_OPT_ETAG)) {
+                continue;
+            }
             /* skip NoCacheKey,
                see https://tools.ietf.org/html/rfc7252#section-5.4.6 */
             if ((opt.opt_num & 0x1E) == 0x1C) {
@@ -158,8 +163,8 @@ nanocoap_cache_entry_t *nanocoap_cache_request_lookup(const coap_pkt_t *req)
     return ce;
 }
 
-int nanocoap_cache_process(const uint8_t *cache_key, unsigned request_method,
-                           const coap_pkt_t *resp, size_t resp_len)
+nanocoap_cache_entry_t *nanocoap_cache_process(const uint8_t *cache_key, unsigned request_method,
+                                               const coap_pkt_t *resp, size_t resp_len)
 {
     nanocoap_cache_entry_t *ce;
     ce = nanocoap_cache_key_lookup(cache_key);
@@ -213,15 +218,14 @@ int nanocoap_cache_process(const uint8_t *cache_key, unsigned request_method,
        ETag Option for validation.
     */
     else if (resp->hdr->code == COAP_CODE_CONTENT) {
-        if (NULL == nanocoap_cache_add_by_key(cache_key, request_method,
-                                              resp, resp_len)) {
+        if ((ce = nanocoap_cache_add_by_key(cache_key, request_method,
+                                            resp, resp_len)) == NULL) {
             /* no space left in the cache? */
-            return -1;
+            return NULL;
         }
-        /* TODO: ETAG handling */
     }
 
-    return 0;
+    return ce;
 }
 static nanocoap_cache_entry_t *_nanocoap_cache_pop(void)
 {

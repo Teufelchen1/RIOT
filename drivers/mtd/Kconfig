@@ -7,14 +7,12 @@
 
 config HAVE_MTD_AT24CXXX
     bool
-    depends on MODULE_AT24CXXX
     imply MODULE_MTD_AT24CXXX if MODULE_MTD
     help
         Indicates that a at24cxxx EEPROM MTD is present
 
 config HAVE_MTD_AT25XXX
     bool
-    depends on MODULE_AT25XXX
     imply MODULE_MTD_AT25XXX if MODULE_MTD
     help
         Indicates that a at25xxx SPI-EEPROM MTD is present
@@ -25,9 +23,9 @@ config HAVE_MTD_NATIVE
     help
         Indicates that a native MTD is present.
 
-config HAVE_MTD_SD_SCARD
+config HAVE_MTD_SDCARD
     bool
-    imply MODULE_MTD_SD_CARD if MODULE_MTD
+    imply MODULE_MTD_SDCARD if MODULE_MTD
     help
         Indicates that a sdcard MTD is present
 
@@ -36,6 +34,12 @@ config HAVE_MTD_SPI_NOR
     imply MODULE_MTD_SPI_NOR if MODULE_MTD
     help
         Indicates that a spi-nor MTD is present
+
+config HAVE_SAM0_SDHC
+    bool
+    imply MODULE_SAM0_SDHC if MODULE_MTD
+    help
+        Indicates that a SAM0 SD Host Controller MTD is present
 
 config HAVE_MTD_SPI_MCI
     bool
@@ -85,6 +89,10 @@ config MODULE_MTD_MCI
 config MODULE_MTD_SDCARD
     bool "MTD interface for SPI SD-Card"
     depends on MODULE_SDCARD_SPI
+
+config MODULE_SAM0_SDHC
+    bool "MTD interface for SAM0 SD Host Controller"
+    depends on CPU_COMMON_SAM0
 
 endmenu # MTD Interfacs
 

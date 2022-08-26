@@ -6,9 +6,6 @@
 
 menu "Drivers"
 
-config MODULE_NETDEV_DEFAULT
-    bool "Enable default network devices on the platform"
-
 rsource "saul/Kconfig"
 
 menu "Actuator Device Drivers"
@@ -108,6 +105,7 @@ rsource "lpd8808/Kconfig"
 rsource "lpsxxx/Kconfig"
 rsource "lsm6dsl/Kconfig"
 rsource "lsm303dlhc/Kconfig"
+rsource "lsm303agr/Kconfig"
 rsource "ltc4150/Kconfig"
 rsource "mag3110/Kconfig"
 rsource "mhz19/Kconfig"

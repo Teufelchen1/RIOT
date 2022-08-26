@@ -115,6 +115,11 @@ extern "C" {
 #define IEEE802154_SIFS_MAX_FRAME_SIZE  (18U)
 
 /**
+ * @brief ACK Timeout period in symbols
+ */
+#define IEEE802154_ACK_TIMEOUT_SYMS     (54)
+
+/**
  * @brief value of measured power when RSSI is zero.
  *
  * This value is defined in the IEEE 802.15.4 standard
@@ -299,6 +304,13 @@ extern const uint8_t ieee802154_addr_bcast[IEEE802154_ADDR_BCAST_LEN];
  */
 #ifndef CONFIG_IEEE802154_CCA_THRESH_DEFAULT
 #define CONFIG_IEEE802154_CCA_THRESH_DEFAULT       (-70)
+#endif
+
+/**
+ * @brief IEEE802.15.4 default value for maximum frame retries.
+ */
+#ifndef CONFIG_IEEE802154_DEFAULT_MAX_FRAME_RETRANS
+#define CONFIG_IEEE802154_DEFAULT_MAX_FRAME_RETRANS     (4U)
 #endif
 
 /**

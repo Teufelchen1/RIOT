@@ -320,6 +320,7 @@ typedef enum {
     NETDEV_NRF24L01P_NG,
     NETDEV_SOCKET_ZEP,
     NETDEV_SX126X,
+    NETDEV_SX1280,
     NETDEV_CC2420,
     NETDEV_ETHOS,
     NETDEV_SLIPDEV,
@@ -327,6 +328,9 @@ typedef enum {
     NETDEV_W5100,
     NETDEV_ENCX24J600,
     NETDEV_ATWINC15X0,
+    NETDEV_KW2XRF,
+    NETDEV_ESP_ETH,
+    NETDEV_ESP_WIFI,
     /* add more if needed */
 } netdev_type_t;
 /** @} */

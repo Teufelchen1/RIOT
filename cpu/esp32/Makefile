@@ -6,7 +6,16 @@ SRC = irq_arch.c startup.c syscalls.c
 # Add a list of subdirectories, that should also be built:
 DIRS += $(RIOTCPU)/esp_common
 DIRS += periph
-DIRS += vendor
+DIRS += esp-idf
+DIRS += esp-idf-api
+
+ifneq (, $(filter esp_bootloader, $(USEMODULE)))
+    DIRS += bootloader
+endif
+
+ifneq (, $(filter esp_ble_nimble, $(USEMODULE)))
+    DIRS += esp-ble-nimble
+endif
 
 ifneq (, $(filter esp_eth, $(USEMODULE)))
     DIRS += esp-eth

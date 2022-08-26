@@ -27,23 +27,25 @@
 
 #include "bitfield.h"
 #include "byteorder.h"
-#include "sched.h"
-#ifdef MODULE_LUID
-#include "luid.h"
-#endif
 #include "msg.h"
 #include "net/gnrc.h"
 #include "net/gnrc/icmpv6.h"
-#ifdef MODULE_GNRC_IPV6_NIB
-#include "net/gnrc/ipv6/nib/nc.h"
-#endif
 #include "net/icmpv6.h"
 #include "net/ipv6.h"
 #include "net/utils.h"
+#include "sched.h"
+#include "shell.h"
 #include "timex.h"
 #include "unaligned.h"
 #include "utlist.h"
-#include "xtimer.h"
+#include "ztimer.h"
+
+#ifdef MODULE_LUID
+#include "luid.h"
+#endif
+#ifdef MODULE_GNRC_IPV6_NIB
+#include "net/gnrc/ipv6/nib/nc.h"
+#endif
 
 #define _SEND_NEXT_PING         (0xEF48)
 #define _PING_FINISH            (0xEF49)
@@ -58,7 +60,7 @@
 
 typedef struct {
     gnrc_netreg_entry_t netreg;
-    xtimer_t sched_timer;
+    ztimer_t sched_timer;
     msg_t sched_msg;
     ipv6_addr_t host;
     char *hostname;
@@ -83,7 +85,7 @@ static void _print_reply(_ping_data_t *data, gnrc_pktsnip_t *icmpv6, uint32_t no
 static void _handle_reply(_ping_data_t *data, gnrc_pktsnip_t *pkt, uint32_t now_us);
 static int _finish(_ping_data_t *data);
 
-int _gnrc_icmpv6_ping(int argc, char **argv)
+static int _gnrc_icmpv6_ping(int argc, char **argv)
 {
     _ping_data_t data = {
         .netreg = GNRC_NETREG_ENTRY_INIT_PID(ICMPV6_ECHO_REP,
@@ -108,7 +110,7 @@ int _gnrc_icmpv6_ping(int argc, char **argv)
         msg_receive(&msg);
         switch (msg.type) {
             case GNRC_NETAPI_MSG_TYPE_RCV: {
-                _handle_reply(&data, msg.content.ptr, xtimer_now_usec());
+                _handle_reply(&data, msg.content.ptr, ztimer_now(ZTIMER_USEC));
                 gnrc_pktbuf_release(msg.content.ptr);
                 break;
             }
@@ -124,7 +126,7 @@ int _gnrc_icmpv6_ping(int argc, char **argv)
         }
     } while (data.num_recv < data.count);
 finish:
-    xtimer_remove(&data.sched_timer);
+    ztimer_remove(ZTIMER_USEC, &data.sched_timer);
     res = _finish(&data);
     gnrc_netreg_unregister(GNRC_NETTYPE_ICMPV6, &data.netreg);
     while (msg_avail() > 0) {
@@ -143,6 +145,9 @@ finish:
     }
     return res;
 }
+
+SHELL_COMMAND(ping6, "Ping via ICMPv6", _gnrc_icmpv6_ping);
+SHELL_COMMAND(ping, "Alias for ping6", _gnrc_icmpv6_ping);
 
 static void _usage(char *cmdname)
 {
@@ -227,7 +232,7 @@ static int _configure(int argc, char **argv, _ping_data_t *data)
     if (res != 0) {
         _usage(cmdname);
     }
-    data->id ^= (xtimer_now_usec() & UINT16_MAX);
+    data->id ^= (ztimer_now(ZTIMER_USEC) & UINT16_MAX);
 #ifdef MODULE_LUID
     luid_custom(&data->id, sizeof(data->id), data->id);
 #endif
@@ -239,7 +244,7 @@ static void _fill_payload(uint8_t *buf, size_t len)
     uint8_t i = 0;
 
     if (len >= sizeof(uint32_t)) {
-        uint32_t now = xtimer_now_usec();
+        uint32_t now = ztimer_now(ZTIMER_USEC);
         memcpy(buf, &now, sizeof(now));
         len -= sizeof(now);
         buf += sizeof(now);
@@ -300,7 +305,7 @@ static void _pinger(_ping_data_t *data)
             }
         }
     }
-    xtimer_set_msg(&data->sched_timer, timer, &data->sched_msg,
+    ztimer_set_msg(ZTIMER_USEC, &data->sched_timer, timer, &data->sched_msg,
                    thread_getpid());
     bf_unset(data->cktab, (size_t)data->num_sent % CKTAB_SIZE);
     pkt = gnrc_icmpv6_echo_build(ICMPV6_ECHO_REQ, data->id,

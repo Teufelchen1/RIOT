@@ -36,7 +36,7 @@ router, stdio is multiplexed over the same line.
 
 The `wifi` uplink will connect to an existing WiFi (IEEE 802.11) network.
 The network must provide a DHCPv6 server that supports prefix delegation (IA_PD) when
-`USE_DHCPV6=1` is set (default).
+`PREFIX_CONF=dhcpv6` is set (default).
 
 Use `WIFI_SSID="SSID" WIFI_PASS="password"` in your `make` command to set your WiFi's
 credentials. You can alternatively edit the `Makefile`.
@@ -46,7 +46,7 @@ to using `esp_now` for the downstream interface.
 
 ## Requirements
 This functionality works only on Linux machines.
-Mac OSX support will be added in the future (lack of native `tap` interface).
+macOS support will be added in the future (lack of native `tap` interface).
 
 If you want to use DHCPv6, you also need a DHCPv6 server configured for prefix
 delegation from the interface facing the border router. With the [KEA] DHCPv6
@@ -64,7 +64,7 @@ server e.g. you can use the following configuration:
        "subnet": "2001:db8::/16",
        "pd-pools": [ { "prefix": "2001:db8::",
                        "prefix-len": 16,
-                       "delegated-len": 64 } ] },
+                       "delegated-len": 64 } ] }
   ]
   ...
 }
@@ -85,10 +85,10 @@ make clean all flash
 ```
 
 If you want to use DHCPv6 instead of UHCP compile with the environment variable
-`USE_DHCPV6` set to 1
+`PREFIX_CONF` set to dhcpv6
 
 ```bash
-USE_DHCPV6=1 make clean all flash
+PREFIX_CONF=dhcpv6 make clean all flash
 ```
 
 ## Usage

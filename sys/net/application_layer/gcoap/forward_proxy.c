@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2020 HAW Hamburg
+ * Copyright (C) 2022 Freie Universität Berlin
  *
  * This file is subject to the terms and conditions of the GNU Lesser
  * General Public License v2.1. See the file LICENSE in the top level
@@ -11,7 +12,10 @@
  *
  * @file
  * @author  Cenk Gündoğan <cenk.guendogan@haw-hamburg.de>
+ * @author  Martine S. Lenders <m.lenders@fu-berlin.de>
  */
+
+#include <stdbool.h>
 
 #include "net/gcoap.h"
 #include "net/gcoap/forward_proxy.h"
@@ -22,10 +26,11 @@
 #include "debug.h"
 
 typedef struct {
-    int in_use;
+    bool in_use;
+    uint8_t req_etag_len;
     sock_udp_ep_t ep;
 #if IS_USED(MODULE_NANOCOAP_CACHE)
-    uint8_t cache_key[CONFIG_NANOCOAP_CACHE_KEY_LENGTH];
+    uint8_t req_etag[COAP_ETAG_LENGTH_MAX];
 #endif
 } client_ep_t;
 
@@ -36,7 +41,7 @@ static int _request_matcher_forward_proxy(gcoap_listener_t *listener,
                                           const coap_resource_t **resource,
                                           coap_pkt_t *pdu);
 static ssize_t _forward_proxy_handler(coap_pkt_t* pdu, uint8_t *buf,
-                                      size_t len, void *ctx);
+                                      size_t len, coap_request_ctx_t *ctx);
 
 const coap_resource_t forward_proxy_resources[] = {
     { "/", COAP_IGNORE, _forward_proxy_handler, NULL },
@@ -54,58 +59,6 @@ gcoap_listener_t forward_proxy_listener = {
 void gcoap_forward_proxy_init(void)
 {
     gcoap_register_listener(&forward_proxy_listener);
-
-    /* initialize the nanocoap cache operation, if compiled */
-    if (IS_USED(MODULE_NANOCOAP_CACHE)) {
-        nanocoap_cache_init();
-    }
-}
-
-static int _cache_build_response(nanocoap_cache_entry_t *ce,
-                                 coap_pkt_t *pdu,
-                                 uint8_t *buf,
-                                 size_t len)
-{
-    /* Use the same code from the cached content. Use other header
-     * fields from the incoming request */
-    gcoap_resp_init(pdu, buf, len, ce->response_pkt.hdr->code);
-    /* copy all options and possible payload from the cached response
-     * to the new response */
-    unsigned header_len_req = coap_get_total_hdr_len(pdu);
-    unsigned header_len_cached = coap_get_total_hdr_len(&ce->response_pkt);
-    unsigned opt_payload_len = ce->response_len - header_len_cached;
-
-    memcpy((buf + header_len_req),
-           (ce->response_buf + header_len_cached),
-           opt_payload_len);
-    return header_len_req + opt_payload_len;
-}
-
-static int _cache_lookup_and_process(coap_pkt_t *pdu,
-                                     uint8_t *buf,
-                                     size_t len,
-                                     client_ep_t *cep)
-{
-    (void) cep;
-
-    uint8_t cache_key[SHA256_DIGEST_LENGTH];
-    ztimer_now_t now = ztimer_now(ZTIMER_SEC);
-    nanocoap_cache_key_generate(pdu, cache_key);
-    nanocoap_cache_entry_t *ce = nanocoap_cache_key_lookup(cache_key);
-
-    /* cache hit, methods are equal, and cache entry is not stale */
-    if (ce &&
-        (ce->request_method == coap_get_code(pdu)) &&
-        (ce->max_age > now)) {
-        /* use response from cache */
-        return _cache_build_response(ce, pdu, buf, len);
-    }
-
-#if IS_USED(MODULE_NANOCOAP_CACHE)
-    memcpy(cep->cache_key, cache_key, CONFIG_NANOCOAP_CACHE_KEY_LENGTH);
-#endif
-
-    return 0;
 }
 
 static client_ep_t *_allocate_client_ep(sock_udp_ep_t *ep)
@@ -115,7 +68,8 @@ static client_ep_t *_allocate_client_ep(sock_udp_ep_t *ep)
          cep < (_client_eps + CONFIG_GCOAP_REQ_WAITING_MAX);
          cep++) {
         if (!cep->in_use) {
-            cep->in_use = 1;
+            cep->in_use = true;
+            cep->req_etag_len = 0U;
             memcpy(&cep->ep, ep, sizeof(*ep));
             return cep;
         }
@@ -145,10 +99,10 @@ static int _request_matcher_forward_proxy(gcoap_listener_t *listener,
 }
 
 static ssize_t _forward_proxy_handler(coap_pkt_t *pdu, uint8_t *buf,
-                                      size_t len, void *ctx)
+                                      size_t len, coap_request_ctx_t *ctx)
 {
-    int pdu_len = 0;
-    sock_udp_ep_t *remote = (sock_udp_ep_t *)ctx;
+    int pdu_len;
+    sock_udp_ep_t *remote = coap_request_ctx_get_context(ctx);
 
     pdu_len = gcoap_forward_proxy_request_process(pdu, remote);
 
@@ -236,27 +190,41 @@ static void _forward_resp_handler(const gcoap_request_memo_t *memo,
 {
     (void) remote; /* this is the origin server */
     client_ep_t *cep = (client_ep_t *)memo->context;
+    size_t buf_len = (pdu->payload - (uint8_t *)pdu->hdr) + pdu->payload_len;
+
 
     if (memo->state == GCOAP_MEMO_RESP) {
-        /* forward the response packet as-is to the client */
-        gcoap_forward_proxy_dispatch((uint8_t *)pdu->hdr,
-                                     (pdu->payload -
-                                      (uint8_t *)pdu->hdr + pdu->payload_len),
-                                     &cep->ep);
 #if IS_USED(MODULE_NANOCOAP_CACHE)
-        coap_pkt_t req;
-        if (memo->send_limit == GCOAP_SEND_LIMIT_NON) {
-            req.hdr = (coap_hdr_t *) &memo->msg.hdr_buf[0];
-        }
-        else {
-            req.hdr = (coap_hdr_t *) memo->msg.data.pdu_buf;
-        }
+        /* req_tag in cep is pre-processor guarded so we need to as well */
+        if (cep->req_etag_len > 0) {
+            uint8_t *resp_etag;
 
-        size_t pdu_len = pdu->payload_len +
-            (pdu->payload - (uint8_t *)pdu->hdr);
-        nanocoap_cache_process(cep->cache_key, coap_get_code(&req), pdu, pdu_len);
+            /* check if we can just send 2.03 Valid instead */
+            if ((cep->req_etag_len == coap_opt_get_opaque(pdu, COAP_OPT_ETAG, &resp_etag)) &&
+                (memcmp(cep->req_etag, resp_etag, cep->req_etag_len) == 0)) {
+                gcoap_resp_init(pdu, (uint8_t *)pdu->hdr, buf_len, COAP_CODE_VALID);
+                coap_opt_add_opaque(pdu, COAP_OPT_ETAG, cep->req_etag, cep->req_etag_len);
+                coap_opt_finish(pdu, COAP_OPT_FINISH_NONE);
+            }
+        }
+        /* we do not need to check if valid came from upstream as this is already automatically
+         * converted by the client-side to the cached response */
 #endif
+        /* else forward the response packet as-is to the client */
     }
+    else if (memo->state == GCOAP_MEMO_RESP_TRUNC) {
+        /* the response was truncated, so there should be enough space
+         * to allocate an empty error message instead (with a potential Observe option) if not,
+         * _listen_buf is _way_ too short ;-) */
+        assert(buf_len >= (sizeof(*pdu->hdr) + 4U));
+        gcoap_resp_init(pdu, (uint8_t *)pdu->hdr, buf_len, COAP_CODE_INTERNAL_SERVER_ERROR);
+        coap_opt_finish(pdu, COAP_OPT_FINISH_NONE);
+    }
+    /* don't use buf_len here, in case the above `gcoap_resp_init`s changed `pdu` */
+    gcoap_forward_proxy_dispatch((uint8_t *)pdu->hdr,
+                                 (pdu->payload -
+                                  (uint8_t *)pdu->hdr + pdu->payload_len),
+                                 &cep->ep);
     _free_client_ep(cep);
 }
 
@@ -282,16 +250,45 @@ static int _gcoap_forward_proxy_add_uri_path(coap_pkt_t *pkt,
 
 static int _gcoap_forward_proxy_copy_options(coap_pkt_t *pkt,
                                              coap_pkt_t *client_pkt,
+                                             client_ep_t *cep,
                                              uri_parser_result_t *urip)
 {
     /* copy all options from client_pkt to pkt */
     coap_optpos_t opt = {0, 0};
     uint8_t *value;
     bool uri_path_added = false;
+    bool etag_added = false;
 
     for (int i = 0; i < client_pkt->options_len; i++) {
         ssize_t optlen = coap_opt_get_next(client_pkt, &opt, &value, !i);
+        /* wrt to ETag option slack: we always have at least the Proxy-URI option in the client_pkt,
+         * so we should hit at least once (and it's opt_num is also >= COAP_OPT_ETAG) */
         if (optlen >= 0) {
+            if (IS_USED(MODULE_NANOCOAP_CACHE) && !etag_added && (opt.opt_num >= COAP_OPT_ETAG)) {
+                static const uint8_t tmp[COAP_ETAG_LENGTH_MAX] = { 0 };
+                /* add slack to maybe add an ETag on stale cache hit later, as is done in gcoap_req_send()
+                 * (which we circumvented in _gcoap_forward_proxy_via_coap()) */
+                if (coap_opt_add_opaque(pkt, COAP_OPT_ETAG, tmp, sizeof(tmp))) {
+                    etag_added = true;
+                }
+            }
+#if IS_USED(MODULE_NANOCOAP_CACHE)
+            /* req_tag in cep is pre-processor guarded so we need to as well */
+            if (opt.opt_num == COAP_OPT_ETAG) {
+                if (cep->req_etag_len == 0) {
+                    /* TODO: what to do on multiple ETags? */
+                    cep->req_etag_len = (uint8_t)optlen;
+                    memcpy(cep->req_etag, value, optlen);
+                }
+                /* skip original ETag of request, otherwise we might accidentally fill the cache
+                 * with 2.03 Valid responses which would require additional handling.
+                 * For upstream validation, gcoap_req_send() will add an ETag, if the response
+                 * was in cache */
+                continue;
+            }
+#else
+            (void)cep;
+#endif
             /* add URI-PATH before any larger opt num */
             if (!uri_path_added && (opt.opt_num > COAP_OPT_URI_PATH)) {
                 if (_gcoap_forward_proxy_add_uri_path(pkt, urip) == -EINVAL) {
@@ -358,7 +355,7 @@ static int _gcoap_forward_proxy_via_coap(coap_pkt_t *client_pkt,
     }
 
     /* copy all options from client_pkt to pkt */
-    len = _gcoap_forward_proxy_copy_options(&pkt, client_pkt, urip);
+    len = _gcoap_forward_proxy_copy_options(&pkt, client_pkt, client_ep, urip);
 
     if (len == -EINVAL) {
         return -EINVAL;
@@ -380,20 +377,6 @@ int gcoap_forward_proxy_request_process(coap_pkt_t *pkt,
 
     if (!cep) {
         return -ENOMEM;
-    }
-
-    if (IS_USED(MODULE_NANOCOAP_CACHE)) {
-        int pdu_len = _cache_lookup_and_process(pkt,
-                                                (uint8_t *)pkt->hdr,
-                                                CONFIG_GCOAP_PDU_BUF_SIZE,
-                                                cep);
-        /* if a valid cache entry was found, then pdu_len contains the
-         * length of that response message */
-        if (pdu_len > 0) {
-            _free_client_ep(cep);
-            return pdu_len;
-        }
-        /* if there was no cache hit, then we continue forwarding */
     }
 
     optlen = coap_get_proxy_uri(pkt, &uri);

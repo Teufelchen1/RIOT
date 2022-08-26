@@ -18,12 +18,14 @@
 
 #include <string.h>
 #include <stdio.h>
+
 #include "net/gnrc/netif.h"
 #include "net/gnrc/rpl.h"
-#include "net/gnrc/rpl/structs.h"
 #include "net/gnrc/rpl/dodag.h"
-#include "utlist.h"
+#include "net/gnrc/rpl/structs.h"
+#include "shell.h"
 #include "trickle.h"
+#include "utlist.h"
 #ifdef MODULE_GNRC_RPL_P2P
 #include "net/gnrc/rpl/p2p.h"
 #include "net/gnrc/rpl/p2p_dodag.h"
@@ -202,33 +204,49 @@ int _gnrc_rpl_send_dis(void)
 }
 
 #ifdef MODULE_NETSTATS_RPL
+static void _print_stats_block(netstats_rpl_block_t *block, const char *name)
+{
+    /* In the following we need to sync with the RPL thread via disabling IRQs
+     * to avoid reading corrupted data. The simpler strategy would be to
+     * disable IRQs during the whole printing (so in _stats()_, but stdio could
+     * be via a slow UART and, hence, have severe impact on the real time
+     * capabilities of the system. The second and simplest strategy would be to
+     * memcpy the whole netstats_rpl_t on to the stack with IRQs disabled and
+     * print the stack copy with IRQs re-enabled. However, that structure is
+     * 128 B in size, so that we would easily provoke a stack-overflow.
+     *
+     * Our strategy instead is to read the data four values at a time with
+     * IRQs disabled, and print them with IRQs re-enabled. The disadvantage is
+     * that stats may get updated while printing one group of values. However,
+     * the stats are grouped such that closely related values are read together.
+     * Hence, related metrics will always refer to the same state of the stats.
+     */
+    unsigned irq_state = irq_disable();
+    uint32_t rx_ucast = block->rx_ucast_count;
+    uint32_t tx_ucast = block->tx_ucast_count;
+    uint32_t rx_mcast = block->rx_mcast_count;
+    uint32_t tx_mcast = block->tx_mcast_count;
+    irq_restore(irq_state);
+    printf("%7s #packets: %10" PRIu32 " / %-10" PRIu32 "  %10" PRIu32 " / %-10" PRIu32 "\n",
+           name, rx_ucast, tx_ucast, rx_mcast, tx_mcast);
+
+    irq_state = irq_disable();
+    rx_ucast = block->rx_ucast_bytes;
+    tx_ucast = block->tx_ucast_bytes;
+    rx_mcast = block->rx_mcast_bytes;
+    tx_mcast = block->tx_mcast_bytes;
+    irq_restore(irq_state);
+    printf("%7s   #bytes: %10" PRIu32 " / %-10" PRIu32 "  %10" PRIu32 " / %-10" PRIu32 "\n",
+           name, rx_ucast, tx_ucast, rx_mcast, tx_mcast);
+}
+
 int _stats(void)
 {
     puts(  "Statistics        (ucast) RX / TX                  RX / TX (mcast)");
-    printf("DIO     #packets: %10" PRIu32 " / %-10" PRIu32 "  %10" PRIu32 " / %-10" PRIu32 "\n",
-           gnrc_rpl_netstats.dio_rx_ucast_count, gnrc_rpl_netstats.dio_tx_ucast_count,
-           gnrc_rpl_netstats.dio_rx_mcast_count, gnrc_rpl_netstats.dio_tx_mcast_count);
-    printf("DIO       #bytes: %10" PRIu32 " / %-10" PRIu32 "  %10" PRIu32 " / %-10" PRIu32 "\n",
-           gnrc_rpl_netstats.dio_rx_ucast_bytes, gnrc_rpl_netstats.dio_tx_ucast_bytes,
-           gnrc_rpl_netstats.dio_rx_mcast_bytes, gnrc_rpl_netstats.dio_tx_mcast_bytes);
-    printf("DIS     #packets: %10" PRIu32 " / %-10" PRIu32 "  %10" PRIu32 " / %-10" PRIu32 "\n",
-           gnrc_rpl_netstats.dis_rx_ucast_count, gnrc_rpl_netstats.dis_tx_ucast_count,
-           gnrc_rpl_netstats.dis_rx_mcast_count, gnrc_rpl_netstats.dis_tx_mcast_count);
-    printf("DIS       #bytes: %10" PRIu32 " / %-10" PRIu32 "  %10" PRIu32 " / %-10" PRIu32 "\n",
-           gnrc_rpl_netstats.dis_rx_ucast_bytes, gnrc_rpl_netstats.dis_tx_ucast_bytes,
-           gnrc_rpl_netstats.dis_rx_mcast_bytes, gnrc_rpl_netstats.dis_tx_mcast_bytes);
-    printf("DAO     #packets: %10" PRIu32 " / %-10" PRIu32 "  %10" PRIu32 " / %-10" PRIu32 "\n",
-           gnrc_rpl_netstats.dao_rx_ucast_count, gnrc_rpl_netstats.dao_tx_ucast_count,
-           gnrc_rpl_netstats.dao_rx_mcast_count, gnrc_rpl_netstats.dao_tx_mcast_count);
-    printf("DAO       #bytes: %10" PRIu32 " / %-10" PRIu32 "  %10" PRIu32 " / %-10" PRIu32 "\n",
-           gnrc_rpl_netstats.dao_rx_ucast_bytes, gnrc_rpl_netstats.dao_tx_ucast_bytes,
-           gnrc_rpl_netstats.dao_rx_mcast_bytes, gnrc_rpl_netstats.dao_tx_mcast_bytes);
-    printf("DAO-ACK #packets: %10" PRIu32 " / %-10" PRIu32 "  %10" PRIu32 " / %-10" PRIu32 "\n",
-           gnrc_rpl_netstats.dao_ack_rx_ucast_count, gnrc_rpl_netstats.dao_ack_tx_ucast_count,
-           gnrc_rpl_netstats.dao_ack_rx_mcast_count, gnrc_rpl_netstats.dao_ack_tx_mcast_count);
-    printf("DAO-ACK   #bytes: %10" PRIu32 " / %-10" PRIu32 "  %10" PRIu32 " / %-10" PRIu32 "\n",
-           gnrc_rpl_netstats.dao_ack_rx_ucast_bytes, gnrc_rpl_netstats.dao_ack_tx_ucast_bytes,
-           gnrc_rpl_netstats.dao_ack_rx_mcast_bytes, gnrc_rpl_netstats.dao_ack_tx_mcast_bytes);
+    _print_stats_block(&gnrc_rpl_netstats.dio, "DIO");
+    _print_stats_block(&gnrc_rpl_netstats.dis, "DIS");
+    _print_stats_block(&gnrc_rpl_netstats.dao, "DAO");
+    _print_stats_block(&gnrc_rpl_netstats.dao_ack, "DAO-ACK");
     return 0;
 }
 #endif
@@ -361,7 +379,7 @@ int _gnrc_rpl_set_pio(char *inst_id, bool status)
     return 0;
 }
 
-int _gnrc_rpl(int argc, char **argv)
+static int _gnrc_rpl(int argc, char **argv)
 {
     if ((argc < 2) || (strcmp(argv[1], "show") == 0)) {
         return _gnrc_rpl_dodag_show();
@@ -453,6 +471,8 @@ int _gnrc_rpl(int argc, char **argv)
     puts("* show\t\t\t\t\t- show instance and dodag tables");
     return 0;
 }
+
+SHELL_COMMAND(rpl, "rpl configuration tool ('rpl help' for more information)", _gnrc_rpl);
 /**
  * @}
  */

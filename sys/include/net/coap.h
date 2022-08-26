@@ -35,7 +35,10 @@ extern "C" {
  * @name    CoAP option numbers
  * @{
  */
+#define COAP_OPT_IF_MATCH       (1)
 #define COAP_OPT_URI_HOST       (3)
+#define COAP_OPT_ETAG           (4)
+#define COAP_OPT_IF_NONE_MATCH  (5)
 #define COAP_OPT_OBSERVE        (6)
 #define COAP_OPT_LOCATION_PATH  (8)
 #define COAP_OPT_URI_PATH       (11)
@@ -153,6 +156,7 @@ extern "C" {
 #define COAP_FORMAT_SENSML_EXI              (115)
 #define COAP_FORMAT_SENML_XML               (310)
 #define COAP_FORMAT_SENSML_XML              (311)
+#define COAP_FORMAT_DNS_MESSAGE           (65053)       /**< NON STANDARD! */
 /** @} */
 
 /**
@@ -168,6 +172,13 @@ extern "C" {
  * @{
  */
 #define COAP_TOKEN_LENGTH_MAX    (8)
+/** @} */
+
+/**
+ * @name    CoAP option constants
+ * @{
+ */
+#define COAP_ETAG_LENGTH_MAX     (8U)   /**< maximum length of the ETag option */
 /** @} */
 
 /**
@@ -193,7 +204,7 @@ extern "C" {
  * (@ref CONFIG_COAP_ACK_TIMEOUT_MS * @ref CONFIG_COAP_RANDOM_FACTOR_1000 / 1000).
  */
 #ifndef CONFIG_COAP_ACK_TIMEOUT_MS
-#define CONFIG_COAP_ACK_TIMEOUT_MS     (2000U)
+#define CONFIG_COAP_ACK_TIMEOUT_MS     (2000UL)
 #endif
 
 /**

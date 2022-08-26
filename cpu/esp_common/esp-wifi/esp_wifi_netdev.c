@@ -28,17 +28,23 @@
 
 #include "esp_common.h"
 #include "esp_attr.h"
+#ifdef MCU_ESP8266
 #include "esp_event_loop.h"
+#else
+#include "esp_event.h"
+#endif
 #ifndef MODULE_ESP_WIFI_AP
 #include "esp_now.h"
 #endif
 #include "esp_system.h"
 #include "esp_wifi.h"
-#include "esp_wifi_internal.h"
+#ifndef MCU_ESP8266
+#include "esp_private/wifi.h"
+#endif
 #include "irq_arch.h"
 #include "tools.h"
 
-#include "nvs_flash/include/nvs_flash.h"
+#include "nvs_flash.h"
 
 #ifdef MODULE_ESP_WIFI_ENTERPRISE
 #include "esp_wpa2.h"
@@ -609,7 +615,7 @@ static int _esp_wifi_send(netdev_t *netdev, const iolist_t *iolist)
     /* send the the packet to the peer(s) mac address */
     if (esp_wifi_internal_tx(ESP_IF_WIFI_STA, dev->tx_buf, dev->tx_len) == ESP_OK) {
 #endif
-#ifdef MCU_ESP32
+#ifndef MCU_ESP8266
         /* for ESP8266 it is done in _esp_wifi_tx_cb */
         _esp_wifi_send_is_in = false;
         netdev->event_callback(netdev, NETDEV_EVENT_TX_COMPLETE);
@@ -799,13 +805,7 @@ static wifi_config_t wifi_config_sta = {
         .scan_method = WIFI_ALL_CHANNEL_SCAN,
         .sort_method = WIFI_CONNECT_AP_BY_SIGNAL,
         .threshold.rssi = -127,
-#if defined(MODULE_ESP_WIFI_ENTERPRISE)
-        .threshold.authmode = WIFI_AUTH_WPA2_ENTERPRISE
-#elif defined(ESP_WIFI_PASS)
-        .threshold.authmode = WIFI_AUTH_WPA_WPA2_PSK
-#else
         .threshold.authmode = WIFI_AUTH_OPEN
-#endif
     }
 };
 #endif /* MODULE_ESP_WIFI_AP */
@@ -872,7 +872,7 @@ void esp_wifi_setup (esp_wifi_netdev_t* dev)
 
 #ifndef MODULE_ESP_NOW
     /* if module esp_now is used, the following part is already done */
-#ifdef MCU_ESP32
+#ifndef MCU_ESP8266
     extern portMUX_TYPE g_intr_lock_mux;
     mutex_init(&g_intr_lock_mux);
 #endif
@@ -947,7 +947,6 @@ void esp_wifi_setup (esp_wifi_netdev_t* dev)
 
 #if defined(MODULE_ESP_WIFI_ENTERPRISE) && !defined(MODULE_ESP_WIFI_AP)
 
-    esp_wpa2_config_t wifi_config_wpa2 = WPA2_CONFIG_INIT_DEFAULT();
 #ifdef ESP_WIFI_EAP_ID
     esp_wifi_sta_wpa2_ent_set_identity((const unsigned char *)ESP_WIFI_EAP_ID,
                                        strlen(ESP_WIFI_EAP_ID));
@@ -960,10 +959,9 @@ void esp_wifi_setup (esp_wifi_netdev_t* dev)
     esp_wifi_sta_wpa2_ent_set_password((const unsigned char *)ESP_WIFI_EAP_PASS,
                                        strlen(ESP_WIFI_EAP_PASS));
 #else /* defined(ESP_WIFI_EAP_USER) && defined(ESP_WIFI_EAP_PASS) */
-#error ESP_WIFI_EAP_USER and ESP_WIFI_EAP_PASS have to define the user name \
-       and the password for EAP phase 2 authentication in esp_wifi_enterprise
+#error "ESP_WIFI_EAP_USER and ESP_WIFI_EAP_PASS have to be defined for EAP phase 2 authentication"
 #endif /* defined(ESP_WIFI_EAP_USER) && defined(ESP_WIFI_EAP_PASS) */
-    esp_wifi_sta_wpa2_ent_enable(&wifi_config_wpa2);
+    esp_wifi_sta_wpa2_ent_enable();
 #endif /* defined(MODULE_ESP_WIFI_ENTERPRISE) && !defined(MODULE_ESP_WIFI_AP) */
 
     /* start the WiFi driver */
@@ -985,6 +983,8 @@ void esp_wifi_setup (esp_wifi_netdev_t* dev)
     dev->event_disc = 0;
     dev->connected = false;
 #endif /* MODULE_ESP_WIFI_AP */
+
+    netdev_register(&dev->netdev, NETDEV_ESP_WIFI, 0);
 }
 
 #endif /* MODULE_ESP_WIFI */
