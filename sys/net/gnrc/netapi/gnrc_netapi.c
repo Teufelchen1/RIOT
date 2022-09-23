@@ -20,6 +20,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <stdio.h>
 
 #include "mbox.h"
 #include "msg.h"
@@ -27,7 +28,7 @@
 #include "net/gnrc/pktbuf.h"
 #include "net/gnrc/netapi.h"
 
-#define ENABLE_DEBUG 0
+#define ENABLE_DEBUG 1
 #include "debug.h"
 
 int _gnrc_netapi_get_set(kernel_pid_t pid, netopt_t opt, uint16_t context,
@@ -86,10 +87,26 @@ int gnrc_netapi_dispatch(gnrc_nettype_t type, uint32_t demux_ctx,
                          uint16_t cmd, gnrc_pktsnip_t *pkt)
 {
     int numof = gnrc_netreg_num(type, demux_ctx);
-
+    if(demux_ctx == 5683) {
+        DEBUG("Got packet to dispatch: \n");
+        for (size_t i = 0; i < pkt->size && i < 6; ++i)
+        {
+            printf("%x ", ((uint8_t *) pkt->data)[i]);
+        }
+        puts("");
+        for (size_t i = 6; i < pkt->size && i < 12; ++i)
+        {
+            printf("%x ", ((uint8_t *) pkt->data)[i]);
+        }
+        puts("");
+    }
+   
     if (numof != 0) {
         gnrc_netreg_entry_t *sendto = gnrc_netreg_lookup(type, demux_ctx);
 
+        if(demux_ctx == 5683) {
+            DEBUG("Sendto: %d\n", sendto->target.pid);
+        }
         gnrc_pktbuf_hold(pkt, numof - 1);
 
         while (sendto) {

@@ -27,7 +27,7 @@
 #include "net/gcoap.h"
 #include "net/cord/lc.h"
 
-#define ENABLE_DEBUG 0
+#define ENABLE_DEBUG 1
 #include "debug.h"
 
 #define FLAG_SUCCESS    (0x0001)
@@ -87,8 +87,9 @@ static void _lock(void)
 
 static int _sync(void)
 {
+    DEBUG("cord_lc: in sync....Pid: %d\n", _waiter->pid);
     thread_flags_t flags = thread_flags_wait_any(FLAG_MASK);
-
+    DEBUG("cord_lc: out of sync!\n");
     if (flags & FLAG_ERR) {
         return CORD_LC_ERR;
     } else if (flags & FLAG_TIMEOUT) {
@@ -202,10 +203,11 @@ static void _on_rd_init(const gcoap_request_memo_t *memo, coap_pkt_t *pdu,
                        const sock_udp_ep_t *remote)
 {
     (void)remote;
-
+    DEBUG("cord_lc: Got response\n");
     thread_flags_t flag = FLAG_NORSC;
 
     if (memo->state == GCOAP_MEMO_RESP) {
+        DEBUG("cord_lc: Is response\n");
         unsigned ct = coap_get_content_type(pdu);
         if (ct != COAP_FORMAT_LINK) {
             DEBUG("cord_lc: error payload not in link format: %u\n", ct);
@@ -215,6 +217,7 @@ static void _on_rd_init(const gcoap_request_memo_t *memo, coap_pkt_t *pdu,
             DEBUG("cord_lc: error empty payload\n");
             goto end;
         }
+        DEBUG("cord_lc: Memcpy\n");
         memcpy(_result_buf, pdu->payload, pdu->payload_len);
         _result_buf_len = pdu->payload_len;
         _result_buf[_result_buf_len] = '\0';
@@ -228,7 +231,10 @@ end:
         _result_buf = NULL;
         _result_buf_len = 0;
     }
+    DEBUG("cord_lc: Flag: %d\n", flag);
+    DEBUG("cord_lc: waiter Pid: %d\n", _waiter->pid);
     thread_flags_set(_waiter, flag);
+    DEBUG("cord_lc: return\n");
 }
 
 static int _send_rd_init_req(coap_pkt_t *pkt, const sock_udp_ep_t *remote,
@@ -254,6 +260,8 @@ static int _send_rd_init_req(coap_pkt_t *pkt, const sock_udp_ep_t *remote,
         DEBUG("cord_lc: error gcoap_req_send()\n");
         return CORD_LC_ERR;
     }
+    DEBUG("cord_lc: going in sync\n");
+
     return _sync();
 }
 
@@ -270,11 +278,13 @@ int cord_lc_rd_init(cord_lc_rd_t *rd, void *buf, size_t maxlen,
     _result_buf = buf;
     _result_buf_len = maxlen;
 
+    DEBUG("Sending packet\n");
     int retval = _send_rd_init_req(&pkt, remote, buf, maxlen);
     if (retval != CORD_LC_OK) {
         DEBUG("cord_lc: failed to send req %d\n", retval);
         goto end;
     }
+    DEBUG("got a packet\n");
 
     /* Parse the payload */
     clif_t lookif;

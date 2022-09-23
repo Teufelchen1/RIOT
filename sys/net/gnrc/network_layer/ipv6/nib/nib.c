@@ -116,7 +116,7 @@ static void _add_static_lladdr(gnrc_netif_t *netif)
 
     if (ipv6_addr_from_str(&lladdr, lladdr_str) != NULL) {
         lladdr.u8[15] += netif->pid;
-        assert(ipv6_addr_is_link_local(&lladdr));
+        //assert(ipv6_addr_is_link_local(&lladdr));
         gnrc_netif_ipv6_addr_add_internal(
                 netif, &lladdr, 64U, GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_VALID
             );

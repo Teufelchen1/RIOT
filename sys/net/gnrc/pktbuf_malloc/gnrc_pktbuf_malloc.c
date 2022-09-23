@@ -35,7 +35,7 @@
 
 #include "pktbuf_internal.h"
 
-#define ENABLE_DEBUG 0
+#define ENABLE_DEBUG 1
 #include "debug.h"
 
 #ifdef MODULE_FUZZING
@@ -60,6 +60,7 @@ static inline void _free(void *ptr)
          * input processing has completed and the application terminates. */
 #if defined(MODULE_FUZZING) && !defined(MODULE_GNRC_SOCK)
         if (ptr == gnrc_pktbuf_fuzzptr) {
+            DEBUG("Fuzzing complete\n");
            exit(EXIT_SUCCESS);
         }
 #endif

@@ -44,7 +44,7 @@
 #include "net/dsm.h"
 #endif
 
-#define ENABLE_DEBUG 0
+#define ENABLE_DEBUG 1
 #include "debug.h"
 
 /* Sentinel value indicating that no immediate response is required */
@@ -443,6 +443,7 @@ static void _process_coap_pdu(gcoap_socket_t *sock, sock_udp_ep_t *remote, sock_
     case COAP_CLASS_SERVER_FAILURE:
         _find_req_memo(&memo, &pdu, remote, false);
         if (memo) {
+            DEBUG("gcoap: Got coap packet\n");
             switch (coap_get_type(&pdu)) {
             case COAP_TYPE_CON:
                 messagelayer_emptyresponse_type = COAP_TYPE_ACK;
@@ -481,6 +482,7 @@ static void _process_coap_pdu(gcoap_socket_t *sock, sock_udp_ep_t *remote, sock_
                     }
                 }
                 if (memo->resp_handler) {
+                    DEBUG("gcoap: Calling response handler\n");
                     memo->resp_handler(memo, &pdu, remote);
                 }
 
@@ -496,6 +498,24 @@ static void _process_coap_pdu(gcoap_socket_t *sock, sock_udp_ep_t *remote, sock_
         }
         else {
             DEBUG("gcoap: msg not found for ID: %u\n", coap_get_id(&pdu));
+            DEBUG("gcoap: remote was: %d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d|%d", 
+                remote->addr.ipv6[0],
+                remote->addr.ipv6[1],
+                remote->addr.ipv6[2],
+                remote->addr.ipv6[3], 
+                remote->addr.ipv6[4],
+                remote->addr.ipv6[5],
+                remote->addr.ipv6[6],
+                remote->addr.ipv6[7],
+                remote->addr.ipv6[8],
+                remote->addr.ipv6[9],
+                remote->addr.ipv6[10],
+                remote->addr.ipv6[11],
+                remote->addr.ipv6[12],
+                remote->addr.ipv6[13],
+                remote->addr.ipv6[14],
+                remote->addr.ipv6[15],
+                remote->port);
             if (coap_get_type(&pdu) == COAP_TYPE_CON) {
                 /* we might run into this if an ACK to a sender got lost
                  * see https://datatracker.ietf.org/doc/html/rfc7252#section-5.3.2 */
@@ -524,6 +544,7 @@ static void _process_coap_pdu(gcoap_socket_t *sock, sock_udp_ep_t *remote, sock_
             DEBUG("gcoap: empty response failed: %d\n", (int)bytes);
         }
     }
+    DEBUG("gcoap: _process_coap_pdu end\n");
 }
 
 /* Handles response timeout for a request; resend confirmable if needed. */
@@ -1374,7 +1395,8 @@ kernel_pid_t gcoap_init(void)
     memset(&_coap_state.observe_memos[0], 0, sizeof(_coap_state.observe_memos));
     memset(&_coap_state.resend_bufs[0], 0, sizeof(_coap_state.resend_bufs));
     /* randomize initial value */
-    atomic_init(&_coap_state.next_message_id, (unsigned)random_uint32());
+    //atomic_init(&_coap_state.next_message_id, (unsigned)random_uint32());
+    atomic_init(&_coap_state.next_message_id, 0);
 
     if (IS_USED(MODULE_NANOCOAP_CACHE)) {
         nanocoap_cache_init();
@@ -1419,7 +1441,7 @@ int gcoap_req_init_path_buffer(coap_pkt_t *pdu, uint8_t *buf, size_t len,
 #if CONFIG_GCOAP_TOKENLEN
         uint8_t token[CONFIG_GCOAP_TOKENLEN];
         for (size_t i = 0; i < CONFIG_GCOAP_TOKENLEN; i += 4) {
-            uint32_t rand = random_uint32();
+            uint32_t rand = 0;//random_uint32();
             memcpy(&token[i],
                    &rand,
                    (CONFIG_GCOAP_TOKENLEN - i >= 4) ? 4 : CONFIG_GCOAP_TOKENLEN - i);

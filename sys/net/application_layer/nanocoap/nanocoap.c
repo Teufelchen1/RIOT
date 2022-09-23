@@ -29,7 +29,7 @@
 #include "bitarithm.h"
 #include "nanocoap_internal.h"
 
-#define ENABLE_DEBUG 0
+#define ENABLE_DEBUG 1
 #include "debug.h"
 
 /**
