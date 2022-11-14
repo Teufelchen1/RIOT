@@ -21,6 +21,7 @@
 #define CFG_I2C_DEFAULT_H
 
 #include "periph_cpu.h"
+#include "kernel_defines.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,7 +37,15 @@ static const i2c_conf_t i2c_config[] = {
         .scl = 27,
         .sda = 26,
         .speed = I2C_SPEED_NORMAL
+    },
+#ifdef BOARD_NRF52840DK
+    {
+        .dev = NRF_TWIM0,
+        .scl = 28,
+        .sda = 29,
+        .speed = I2C_SPEED_NORMAL
     }
+#endif
 };
 #define I2C_NUMOF           ARRAY_SIZE(i2c_config)
 /** @} */
