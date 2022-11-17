@@ -55,13 +55,19 @@ void ecdsa(void)
     psa_set_key_bits(&privkey_attr, bits);
 
 #ifdef SECURE_ELEMENT
+#if IS_USED(MODULE_CRYPTOAUTHLIB_CONTRIB)
     psa_key_lifetime_t lifetime = PSA_KEY_LIFETIME_FROM_PERSISTENCE_AND_LOCATION(
         PSA_KEY_LIFETIME_VOLATILE, PSA_ATCA_LOCATION_DEV0);
+#endif
+#if IS_USED(MODULE_STSAFEA_CONTRIB)
+    psa_key_lifetime_t lifetime = PSA_KEY_LIFETIME_FROM_PERSISTENCE_AND_LOCATION(
+        PSA_KEY_LIFETIME_VOLATILE, PSA_KEY_LOCATION_SE_MIN + 1);
+#endif
     psa_set_key_lifetime(&privkey_attr, lifetime);
 #endif
 
     psa_status_t status = PSA_ERROR_DOES_NOT_EXIST;
-
+    
     status = psa_generate_key(&privkey_attr, &privkey_id);
     if (status != PSA_SUCCESS) {
         printf("Local Generate Key failed: %d\n", (int)status);
@@ -73,7 +79,7 @@ void ecdsa(void)
         printf("Export Public Key failed: %d\n", (int)status);
         return;
     }
-
+    
     status = psa_hash_compute(PSA_ALG_SHA_256, msg, sizeof(msg), hash, sizeof(hash), &hash_length);
     if (status != PSA_SUCCESS) {
         printf("Hash Generation failed: %d\n", (int)status);
@@ -93,7 +99,7 @@ void ecdsa(void)
         printf("PSA Import Public Key failed: %d\n", (int)status);
         return;
     }
-
+    
     status = psa_sign_hash(privkey_id, alg, hash, sizeof(hash), signature, sizeof(signature),
                            &sig_length);
     if (status != PSA_SUCCESS) {

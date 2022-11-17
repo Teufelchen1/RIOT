@@ -3,7 +3,9 @@ RIOTBASE ?= $(CURDIR)/../..
 
 APPLICATION = example_psa_crypto
 
-BOARD ?= native
+BOARD ?= nucleo-f411re #nrf52840dk
+DEVELHELP = 1
+#native
 
 USEMODULE += psa_crypto
 USEMODULE += psa_hash

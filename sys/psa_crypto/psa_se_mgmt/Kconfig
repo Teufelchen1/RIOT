@@ -35,12 +35,20 @@ config MODULE_PSA_SECURE_ELEMENT_ATECCX08A_ECC
     select HAVE_PSA_SECURE_ELEMENT_ASYMMETRIC
     depends on MODULE_PSA_SECURE_ELEMENT_ATECCX08A
 
-config MODULE_PSA_SE_MGMT
-    bool
+menuconfig PSA_SE_STSAFEA
+    bool "StSafeAxx Driver"
+    select PACKAGE_STSAFEA
+
+config PSA_MULTIPLE_SECURE_ELEMENTS
+    bool "Use multiple secure elements"
+
+config PSA_MAX_SE_COUNT
+    int "Sets maximum number of usable SEs"
+    default 2 if PSA_MULTIPLE_SECURE_ELEMENTS
+    default 1
+
 
 config HAVE_PSA_SECURE_ELEMENT_ASYMMETRIC
     bool
     help
         Indicates that an asymmetric operation is used with secure elements.
-
-endif # MODULE_PSA_SECURE_ELEMENT

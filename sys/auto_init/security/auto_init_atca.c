@@ -15,7 +15,7 @@
  * @author      Lena Boeckmann <lena.boeckmann@haw-hamburg.de>
  * @}
  */
-
+#ifdef MODULE_CRYPTOAUTHLIB
 #include "log.h"
 #include "atca.h"
 #include "atca_params.h"
@@ -62,3 +62,4 @@ void auto_init_atca(void)
 #endif
     }
 }
+#endif

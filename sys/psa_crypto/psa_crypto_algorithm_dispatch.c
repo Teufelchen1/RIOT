@@ -27,6 +27,9 @@
 #include "psa_ciphers.h"
 #include "psa_crypto_operation_encoder.h"
 
+#define ENABLE_DEBUG    1
+#include "debug.h"
+
 psa_status_t psa_algorithm_dispatch_hash_setup(psa_hash_operation_t *operation,
                                                psa_algorithm_t alg)
 {
@@ -169,7 +172,8 @@ psa_status_t psa_algorithm_dispatch_sign_hash(  const psa_key_attributes_t *attr
             PSA_ENCODE_ECC_KEY_TYPE(attributes->bits, PSA_KEY_TYPE_ECC_GET_CURVE(attributes->type));
 
         if (asym_key == PSA_INVALID_OPERATION) {
-            return PSA_ERROR_INVALID_ARGUMENT;
+            DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
         }
     }
 
@@ -215,7 +219,8 @@ psa_status_t psa_algorithm_dispatch_verify_hash(  const psa_key_attributes_t *at
             PSA_ENCODE_ECC_KEY_TYPE(attributes->bits, PSA_KEY_TYPE_ECC_GET_CURVE(attributes->type));
 
         if (asym_key == PSA_INVALID_OPERATION) {
-            return PSA_ERROR_INVALID_ARGUMENT;
+            DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
         }
     }
 
@@ -268,7 +273,8 @@ psa_status_t psa_algorithm_dispatch_generate_key(   const psa_key_attributes_t *
                                         PSA_KEY_TYPE_ECC_GET_CURVE(attributes->type));
 
             if (asym_key == PSA_INVALID_OPERATION) {
-                return PSA_ERROR_INVALID_ARGUMENT;
+                DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
             }
         }
 
@@ -309,7 +315,8 @@ psa_status_t psa_algorithm_dispatch_cipher_encrypt( const psa_key_attributes_t *
     psa_get_key_data_from_key_slot(slot, &key_data, &key_bytes);
 
     if (op == PSA_INVALID_OPERATION) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     switch (op) {

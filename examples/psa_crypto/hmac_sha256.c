@@ -55,8 +55,14 @@ void psa_hmac_sha256(void)
     psa_set_key_type(&attr, PSA_KEY_TYPE_HMAC);
 
 #ifdef SECURE_ELEMENT
+#if IS_USED(MODULE_CRYPTOAUTHLIB_CONTRIB)
     psa_key_lifetime_t lifetime = PSA_KEY_LIFETIME_FROM_PERSISTENCE_AND_LOCATION(
         PSA_KEY_LIFETIME_VOLATILE, PSA_ATCA_LOCATION_DEV0);
+#endif
+#if IS_USED(MODULE_STSAFEA_CONTRIB)
+    psa_key_lifetime_t lifetime = PSA_KEY_LIFETIME_FROM_PERSISTENCE_AND_LOCATION(
+        PSA_KEY_LIFETIME_VOLATILE, PSA_KEY_LOCATION_SE_MIN + 1);
+#endif
     psa_set_key_lifetime(&attr, lifetime);
 #endif
 

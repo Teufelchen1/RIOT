@@ -21,7 +21,7 @@
 #include "clist.h"
 #include "psa_crypto_slot_management.h"
 
-#define ENABLE_DEBUG    0
+#define ENABLE_DEBUG    1
 #include "debug.h"
 
 #if IS_USED(MODULE_PSA_SECURE_ELEMENT)

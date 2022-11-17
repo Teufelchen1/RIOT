@@ -32,10 +32,11 @@ extern void ecdsa_sec_se(void);
 
 int main(void)
 {
+    printf("SE Count: %d\n", CONFIG_PSA_MAX_SE_COUNT);
     psa_crypto_init();
 
-    psa_hmac_sha256();
-    cipher_aes_128();
+    //psa_hmac_sha256();
+    //cipher_aes_128();
     ecdsa();
 
 #ifdef MULTIPLE_SE
