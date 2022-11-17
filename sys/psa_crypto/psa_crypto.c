@@ -29,7 +29,7 @@
 #include "random.h"
 #include "kernel_defines.h"
 
-#define ENABLE_DEBUG    0
+#define ENABLE_DEBUG    1
 #include "debug.h"
 
 static uint8_t lib_initialized = 0;
@@ -298,6 +298,7 @@ static psa_status_t psa_key_policy_permits( const psa_key_policy_t *policy,
                                             psa_algorithm_t requested_alg)
 {
     if (requested_alg == 0) {
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
         return PSA_ERROR_INVALID_ARGUMENT;
     }
     if (policy->alg == requested_alg) {
@@ -396,11 +397,13 @@ static psa_status_t psa_cipher_setup(   psa_cipher_operation_t *operation,
     }
 
     if (!operation) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     if (!PSA_ALG_IS_CIPHER(alg)) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     status = psa_get_and_lock_key_slot_with_policy(key, &slot, usage, alg);
@@ -470,11 +473,13 @@ static psa_status_t psa_cipher_encrypt_decrypt( psa_key_id_t key,
     }
 
     if (!input || !output || !output_length) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     if (!PSA_ALG_IS_CIPHER(alg)) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     psa_key_usage_t usage = (direction == PSA_CRYPTO_DRIVER_ENCRYPT ?
@@ -492,7 +497,8 @@ static psa_status_t psa_cipher_encrypt_decrypt( psa_key_id_t key,
 
     if (((alg == PSA_ALG_CBC_NO_PADDING) || (alg == PSA_ALG_ECB_NO_PADDING)) &&
         (output_size % PSA_BLOCK_CIPHER_BLOCK_LENGTH(slot->attr.type))) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     if (direction == PSA_CRYPTO_DRIVER_ENCRYPT) {
@@ -577,7 +583,8 @@ psa_status_t psa_cipher_generate_iv(psa_cipher_operation_t *operation,
     }
 
     if (!operation || !iv || !iv_length) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     *iv_length = 0;
@@ -636,7 +643,8 @@ psa_status_t psa_hash_setup(psa_hash_operation_t *operation,
     }
 
     if (!operation) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     if (operation->alg != 0) {
@@ -644,7 +652,8 @@ psa_status_t psa_hash_setup(psa_hash_operation_t *operation,
     }
 
     if (!PSA_ALG_IS_HASH(alg)) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
     psa_status_t status = psa_algorithm_dispatch_hash_setup(operation, alg);
     if (status == PSA_SUCCESS) {
@@ -663,7 +672,8 @@ psa_status_t psa_hash_update(psa_hash_operation_t *operation,
     }
 
     if (!operation || !input) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     if (operation->alg == 0) {
@@ -688,7 +698,8 @@ psa_status_t psa_hash_finish(psa_hash_operation_t *operation,
     }
 
     if (!operation || !hash || !hash_length) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     if (operation->alg == 0) {
@@ -726,7 +737,8 @@ psa_status_t psa_hash_verify(psa_hash_operation_t *operation,
     }
 
     if (!operation || !hash) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     status = psa_hash_finish(operation, digest, PSA_HASH_MAX_SIZE, &actual_hash_length);
@@ -796,7 +808,8 @@ psa_status_t psa_hash_compare(psa_algorithm_t alg,
     }
 
     if (!input || !hash) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     status = psa_hash_setup(&operation, alg);
@@ -830,7 +843,8 @@ psa_status_t psa_hash_compute(psa_algorithm_t alg,
     }
 
     if (!input || !hash || !hash_length) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     if (hash_size < PSA_HASH_LENGTH(alg)) {
@@ -874,7 +888,8 @@ static psa_status_t psa_validate_key_policy(const psa_key_policy_t *policy)
                            PSA_KEY_USAGE_SIGN_HASH |
                            PSA_KEY_USAGE_VERIFY_HASH |
                            PSA_KEY_USAGE_DERIVE)) != 0) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     return PSA_SUCCESS;
@@ -895,12 +910,14 @@ static psa_status_t psa_validate_unstructured_key_size(psa_key_type_t type, size
     switch (type) {
     case PSA_KEY_TYPE_AES:
         if (bits != 128 && bits != 192 && bits != 256) {
-            return PSA_ERROR_INVALID_ARGUMENT;
+            DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
         }
         break;
     case PSA_KEY_TYPE_HMAC:
         if (bits % 8 != 0) {
-            return PSA_ERROR_INVALID_ARGUMENT;
+            DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
         }
         break;
     default:
@@ -965,12 +982,14 @@ static psa_status_t psa_validate_key_attributes(const psa_key_attributes_t *attr
 
     if (PSA_KEY_LIFETIME_IS_VOLATILE(lifetime)) {
         if (key != 0) {
-            return PSA_ERROR_INVALID_ARGUMENT;
+            DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
         }
     }
     else {
         if (!psa_is_valid_key_id(key, 0)) {
-            return PSA_ERROR_INVALID_ARGUMENT;
+            DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
         }
     }
 
@@ -1145,7 +1164,8 @@ static psa_status_t psa_builtin_export_public_key( const uint8_t *key_buffer,
                                                    size_t *data_length)
 {
     if (key_buffer_size == 0 || data_size == 0) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
     /** Some implementations and drivers can generate a public key from existing private key
      * material. This implementation does not support the recalculation of a public key, yet.
@@ -1173,7 +1193,8 @@ psa_status_t psa_export_public_key(psa_key_id_t key,
     }
 
     if (!data || !data_length) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     *data_length = 0;
@@ -1240,11 +1261,13 @@ psa_status_t psa_generate_key(const psa_key_attributes_t *attributes,
     }
 
     if (!attributes || !key) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     if (psa_get_key_bits(attributes) == 0) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     /* Find empty slot */
@@ -1283,7 +1306,8 @@ psa_status_t psa_builtin_generate_random(   uint8_t *output,
                                             size_t output_size)
 {
     if (!output) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     random_bytes(output, output_size);
@@ -1298,7 +1322,8 @@ psa_status_t psa_generate_random(uint8_t *output,
     }
 
     if (!output) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     return psa_location_dispatch_generate_random(output, output_size);
@@ -1311,7 +1336,8 @@ psa_status_t psa_get_key_attributes(psa_key_id_t key,
     psa_key_slot_t *slot = NULL;
 
     if (!attributes) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     psa_reset_key_attributes(attributes);
@@ -1336,7 +1362,8 @@ psa_status_t psa_builtin_import_key(const psa_key_attributes_t *attributes,
     psa_key_type_t type = attributes->type;
 
     if (!attributes || !data || !key_buffer || !key_buffer_length || !bits) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     if (data_length == 0) {
@@ -1385,7 +1412,8 @@ psa_status_t psa_import_key(const psa_key_attributes_t *attributes,
     }
 
     if (!attributes || !data) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     if (attributes->bits == 0) {
@@ -1415,7 +1443,8 @@ psa_status_t psa_import_key(const psa_key_attributes_t *attributes,
     }
     else if (bits != slot->attr.bits) {
         psa_fail_key_creation(slot, driver);
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     status = psa_finish_key_creation(slot, driver, key);
@@ -1553,7 +1582,8 @@ static psa_status_t psa_mac_validate_alg_and_key_and_size(psa_key_attributes_t *
     }
 
     if (operation_mac_size > PSA_MAC_MAX_SIZE) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     if (mac_size < operation_mac_size) {
@@ -1580,7 +1610,8 @@ psa_status_t psa_mac_compute(psa_key_id_t key,
     }
 
     if (!input || !mac || !mac_length) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     status = psa_get_key_attributes(key, &attr);
@@ -1719,7 +1750,8 @@ psa_status_t psa_sign_hash(psa_key_id_t key,
     }
 
     if (!hash || !signature || !signature_length) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     if (!PSA_ALG_IS_ECDSA(alg)) {
@@ -1727,7 +1759,8 @@ psa_status_t psa_sign_hash(psa_key_id_t key,
     }
 
     if (hash_length != PSA_HASH_LENGTH(alg)) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     status = psa_get_and_lock_key_slot_with_policy(key, &slot, PSA_KEY_USAGE_SIGN_HASH, alg);
@@ -1742,7 +1775,8 @@ psa_status_t psa_sign_hash(psa_key_id_t key,
 
     if (!PSA_KEY_TYPE_IS_KEY_PAIR(slot->attr.type)) {
         unlock_status = psa_unlock_key_slot(slot);
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     psa_key_attributes_t attributes = slot->attr;
@@ -1788,7 +1822,8 @@ psa_status_t psa_verify_hash(psa_key_id_t key,
     }
 
     if (!hash || !signature) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     if (!PSA_ALG_IS_ECDSA(alg)) {
@@ -1796,7 +1831,8 @@ psa_status_t psa_verify_hash(psa_key_id_t key,
     }
 
     if (hash_length != PSA_HASH_LENGTH(alg)) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     status = psa_get_and_lock_key_slot_with_policy(key, &slot, PSA_KEY_USAGE_VERIFY_HASH, alg);
@@ -1806,7 +1842,8 @@ psa_status_t psa_verify_hash(psa_key_id_t key,
     }
 
     if (signature_length != PSA_SIGN_OUTPUT_SIZE(slot->attr.type, slot->attr.bits, alg)) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     /**

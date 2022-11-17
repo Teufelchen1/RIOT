@@ -20,6 +20,9 @@
 #include "psa_crypto_se_management.h"
 #include "psa_crypto_se_driver.h"
 
+#define ENABLE_DEBUG    1
+#include "debug.h"
+
 /**
  * @brief   Array containing the registered driver instances.
  */
@@ -37,11 +40,13 @@ psa_status_t psa_register_secure_element(psa_key_location_t location,
     }
 
     if (location == PSA_KEY_LOCATION_LOCAL_STORAGE) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     if (location > PSA_KEY_LOCATION_SE_MAX) {
-        return PSA_ERROR_INVALID_ARGUMENT;
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
+return PSA_ERROR_INVALID_ARGUMENT;
     }
 
     if (methods->persistent_data_size > PSA_MAX_PERSISTENT_DATA_SIZE) {
@@ -69,6 +74,8 @@ psa_status_t psa_register_secure_element(psa_key_location_t location,
     temp->u.internal.transient_data = (uintptr_t)drv_data;
     temp->u.internal.persistent_data_size = methods->persistent_data_size;
 
+    DEBUG("Driver_table[i].location: %lx\n", driver_table[i].location);
+
     /* TODO: Load Persistent data if persistent_data_size != 0 */
 
     return PSA_SUCCESS;
@@ -84,6 +91,7 @@ psa_se_drv_data_t *psa_get_se_driver_data(psa_key_lifetime_t lifetime)
     }
 
     for (size_t i = 0; i < PSA_MAX_SE_COUNT; i++) {
+        DEBUG("Driver Locations: %lx - %lx\n", driver_table[i].location, location);
         if (driver_table[i].location == location) {
             drv = &driver_table[i];
         }

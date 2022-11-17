@@ -21,7 +21,7 @@
 #include "clist.h"
 #include "psa_crypto_slot_management.h"
 
-#define ENABLE_DEBUG    0
+#define ENABLE_DEBUG    1
 #include "debug.h"
 
 #if (IS_ACTIVE(CONFIG_PSA_SECURE_ELEMENT))
@@ -430,6 +430,7 @@ psa_status_t psa_validate_key_location(psa_key_lifetime_t lifetime, psa_se_drv_d
 #else
         (void)p_drv;
 #endif /* CONFIG_PSA_SECURE_ELEMENT */
+        DEBUG("PSA Invalid Argument: %s:%d\n", __FILE__, __LINE__);
         return PSA_ERROR_INVALID_ARGUMENT;
     }
     else {

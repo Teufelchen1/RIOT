@@ -31,6 +31,10 @@ config PSA_SE_ATECCX08A_ECC
 
 endif # PSA_SE_ATECCX08A
 
+menuconfig PSA_SE_STSAFEA
+    bool "StSafeAxx Driver"
+    select PACKAGE_STSAFEA
+
 config PSA_MULTIPLE_SECURE_ELEMENTS
     bool "Use multiple secure elements"
 

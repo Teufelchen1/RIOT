@@ -279,6 +279,11 @@ extern void auto_init_atca(void);
 AUTO_INIT(auto_init_atca,
           AUTO_INIT_PRIO_MOD_CRYPTOAUTHLIB);
 #endif
+#if IS_USED(MODULE_STSAFEA)
+extern void auto_init_stsafe(void);
+AUTO_INIT(auto_init_stsafe,
+          AUTO_INIT_PRIO_MOD_STSAFEA);
+#endif
 #endif
 #if IS_USED(MODULE_DRIVER_CRYPTOCELL)
 extern void cryptocell_setup(void);

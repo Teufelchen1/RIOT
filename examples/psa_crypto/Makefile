@@ -3,7 +3,9 @@ RIOTBASE ?= $(CURDIR)/../..
 
 APPLICATION = example_psa_crypto
 
-BOARD ?= native
+BOARD ?= nucleo-f411re #nrf52840dk
+DEVELHELP = 1
+#native
 
 ifeq (1, $(SECURE_ELEMENT))
 	CFLAGS += -DSECURE_ELEMENT
