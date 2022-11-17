@@ -274,11 +274,9 @@ AUTO_INIT(auto_init_mbedtls,
           AUTO_INIT_PRIO_MOD_MBEDTLS);
 #endif
 #if IS_USED(MODULE_AUTO_INIT_SECURITY)
-#if IS_USED(MODULE_CRYPTOAUTHLIB)
-extern void auto_init_atca(void);
-AUTO_INIT(auto_init_atca,
-          AUTO_INIT_PRIO_MOD_CRYPTOAUTHLIB);
-#endif
+extern void auto_init_security(void);
+AUTO_INIT(auto_init_security,
+          AUTO_INIT_PRIO_MOD_SECURITY);
 #endif
 #if IS_USED(MODULE_DRIVER_CRYPTOCELL)
 extern void cryptocell_setup(void);
