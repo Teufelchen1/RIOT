@@ -1,4 +1,6 @@
 MATCH_MAKE_VERSION = 4.%
+$(warning   base in Makefile.include $(RIOTBASE))
+
 
 MAKEFLAGS += --no-builtin-rules
 
@@ -41,7 +43,11 @@ include $(RIOT_MAKEFILES_GLOBAL_PRE)
 -include Makefile.local
 
 # set undefined variables
+$(warning   base in Makefile.include $(RIOTBASE))
+
 RIOTBASE                        ?= $(_riotbase)
+$(warning   base in Makefile.include $(RIOTBASE))
+
 RIOTCPU                         ?= $(RIOTBASE)/cpu
 # Deprecated to set RIOTBOARD, use EXTERNAL_BOARD_DIRS
 RIOTBOARD                       ?= $(RIOTBASE)/boards
