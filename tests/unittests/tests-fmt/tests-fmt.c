@@ -48,13 +48,13 @@ static void test_fmt_byte_hex(void)
 
     out[2] = '\0';
     TEST_ASSERT_EQUAL_INT(2, fmt_byte_hex(out, 0));
-    TEST_ASSERT_EQUAL_STRING("00", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("00", (char *)out);
 
     TEST_ASSERT_EQUAL_INT(2, fmt_byte_hex(out, 128));
-    TEST_ASSERT_EQUAL_STRING("80", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("80", (char *)out);
 
     TEST_ASSERT_EQUAL_INT(2, fmt_byte_hex(out, 255));
-    TEST_ASSERT_EQUAL_STRING("FF", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("FF", (char *)out);
 
     /* check that the buffer was not overflowed */
     TEST_ASSERT_EQUAL_STRING("zzzz", &out[3]);
@@ -63,48 +63,48 @@ static void test_fmt_byte_hex(void)
 static void test_fmt_bytes_hex(void)
 {
     char out[20] = "zzzzzzzzzzzzzzzzzzz";
-    uint8_t val[7] = { 0xAA, 9, 8, 7, 6, 0xA8, 0xEF};
+    uint8_t val[7] = {0xAA, 9, 8, 7, 6, 0xA8, 0xEF};
     uint8_t bytes = 0;
 
     bytes = fmt_bytes_hex(out, val, 0);
     out[bytes] = '\0';
     TEST_ASSERT_EQUAL_INT(0, bytes);
-    TEST_ASSERT_EQUAL_STRING("", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("", (char *)out);
 
     bytes = fmt_bytes_hex(out, val, 1);
     out[bytes] = '\0';
     TEST_ASSERT_EQUAL_INT(2, bytes);
-    TEST_ASSERT_EQUAL_STRING("AA", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("AA", (char *)out);
 
     bytes = fmt_bytes_hex(out, val, 2);
     out[bytes] = '\0';
     TEST_ASSERT_EQUAL_INT(4, bytes);
-    TEST_ASSERT_EQUAL_STRING("AA09", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("AA09", (char *)out);
 
     bytes = fmt_bytes_hex(out, val, 3);
     out[bytes] = '\0';
     TEST_ASSERT_EQUAL_INT(6, bytes);
-    TEST_ASSERT_EQUAL_STRING("AA0908", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("AA0908", (char *)out);
 
     bytes = fmt_bytes_hex(out, val, 4);
     out[bytes] = '\0';
     TEST_ASSERT_EQUAL_INT(8, bytes);
-    TEST_ASSERT_EQUAL_STRING("AA090807", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("AA090807", (char *)out);
 
     bytes = fmt_bytes_hex(out, val, 5);
     out[bytes] = '\0';
     TEST_ASSERT_EQUAL_INT(10, bytes);
-    TEST_ASSERT_EQUAL_STRING("AA09080706", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("AA09080706", (char *)out);
 
     bytes = fmt_bytes_hex(out, val, 6);
     out[bytes] = '\0';
     TEST_ASSERT_EQUAL_INT(12, bytes);
-    TEST_ASSERT_EQUAL_STRING("AA09080706A8", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("AA09080706A8", (char *)out);
 
     bytes = fmt_bytes_hex(out, val, 7);
     out[bytes] = '\0';
     TEST_ASSERT_EQUAL_INT(14, bytes);
-    TEST_ASSERT_EQUAL_STRING("AA09080706A8EF", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("AA09080706A8EF", (char *)out);
 
     /* check that the buffer was not overflowed */
     TEST_ASSERT_EQUAL_STRING("zzzz", &out[15]);
@@ -113,28 +113,28 @@ static void test_fmt_bytes_hex(void)
 static void test_fmt_bytes_hex_reverse(void)
 {
     char out[12] = "zzzzzzzzzzz";
-    uint8_t val[4] = { 9, 8, 7, 6 };
+    uint8_t val[4] = {9, 8, 7, 6};
     uint8_t bytes = 0;
 
     bytes = fmt_bytes_hex_reverse(out, val, 1);
     out[bytes] = '\0';
     TEST_ASSERT_EQUAL_INT(2, bytes);
-    TEST_ASSERT_EQUAL_STRING("09", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("09", (char *)out);
 
     bytes = fmt_bytes_hex_reverse(out, val, 2);
     out[bytes] = '\0';
     TEST_ASSERT_EQUAL_INT(4, bytes);
-    TEST_ASSERT_EQUAL_STRING("0809", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("0809", (char *)out);
 
     bytes = fmt_bytes_hex_reverse(out, val, 3);
     out[bytes] = '\0';
     TEST_ASSERT_EQUAL_INT(6, bytes);
-    TEST_ASSERT_EQUAL_STRING("070809", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("070809", (char *)out);
 
     bytes = fmt_bytes_hex_reverse(out, val, 4);
     out[bytes] = '\0';
     TEST_ASSERT_EQUAL_INT(8, bytes);
-    TEST_ASSERT_EQUAL_STRING("06070809", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("06070809", (char *)out);
 
     /* check that the buffer was not overflowed */
     TEST_ASSERT_EQUAL_STRING("zz", &out[9]);
@@ -180,7 +180,7 @@ static void test_fmt_hex_bytes(void)
     TEST_ASSERT_EQUAL_INT(3, bytes);
 
     char hex2[3] = "00";
-    uint8_t val1[1] = { 0 };
+    uint8_t val1[1] = {0};
     bytes = fmt_hex_bytes(val1, hex2);
     TEST_ASSERT_EQUAL_INT(1, bytes);
     TEST_ASSERT_EQUAL_INT(0, val1[0]);
@@ -222,7 +222,7 @@ static void test_fmt_u32_hex(void)
 
     out[8] = '\0';
     TEST_ASSERT_EQUAL_INT(8, fmt_u32_hex(out, val));
-    TEST_ASSERT_EQUAL_STRING("DEADBEEF", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("DEADBEEF", (char *)out);
 
     /* check that the buffer was not overflowed */
     TEST_ASSERT_EQUAL_STRING("zz", &out[9]);
@@ -235,7 +235,7 @@ static void test_fmt_u64_hex(void)
 
     out[16] = '\0';
     TEST_ASSERT_EQUAL_INT(16, fmt_u64_hex(out, val));
-    TEST_ASSERT_EQUAL_STRING("0DEAD0BEEF0CAFE0", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("0DEAD0BEEF0CAFE0", (char *)out);
 
     /* check that the buffer was not overflowed */
     TEST_ASSERT_EQUAL_STRING("zz", &out[17]);
@@ -250,13 +250,13 @@ static void test_fmt_u32_dec(void)
     chars = fmt_u32_dec(out, val);
     TEST_ASSERT_EQUAL_INT(8, chars);
     out[chars] = '\0';
-    TEST_ASSERT_EQUAL_STRING("12345678", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("12345678", (char *)out);
 
     val = 1234567890;
     chars = fmt_u32_dec(out, val);
     TEST_ASSERT_EQUAL_INT(10, chars);
     out[chars] = '\0';
-    TEST_ASSERT_EQUAL_STRING("1234567890", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("1234567890", (char *)out);
 
     /* check that the buffer was not overflowed */
     TEST_ASSERT_EQUAL_STRING("zzzz", &out[11]);
@@ -271,13 +271,13 @@ static void test_fmt_u16_dec(void)
     chars = fmt_u16_dec(out, val);
     TEST_ASSERT_EQUAL_INT(4, chars);
     out[chars] = '\0';
-    TEST_ASSERT_EQUAL_STRING("6556", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("6556", (char *)out);
 
     val = 65535;
     chars = fmt_u16_dec(out, val);
     TEST_ASSERT_EQUAL_INT(5, chars);
     out[chars] = '\0';
-    TEST_ASSERT_EQUAL_STRING("65535", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("65535", (char *)out);
 
     /* check that the buffer was not overflowed */
     TEST_ASSERT_EQUAL_STRING("z", &out[6]);
@@ -292,13 +292,13 @@ static void test_fmt_s32_dec_a(void)
     chars = fmt_s32_dec(out, val);
     TEST_ASSERT_EQUAL_INT(4, chars);
     out[chars] = '\0';
-    TEST_ASSERT_EQUAL_STRING("9876", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("9876", (char *)out);
 
     val = -9876;
     chars = fmt_s32_dec(out, val);
     TEST_ASSERT_EQUAL_INT(5, chars);
     out[chars] = '\0';
-    TEST_ASSERT_EQUAL_STRING("-9876", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("-9876", (char *)out);
 
     /* check that the buffer was not overflowed */
     TEST_ASSERT_EQUAL_STRING("zzzzzzzzz", &out[6]);
@@ -313,13 +313,13 @@ static void test_fmt_s32_dec_b(void)
     chars = fmt_s32_dec(out, val);
     TEST_ASSERT_EQUAL_INT(10, chars);
     out[chars] = '\0';
-    TEST_ASSERT_EQUAL_STRING("2147483647", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("2147483647", (char *)out);
 
     val = -2147483648;
     chars = fmt_s32_dec(out, val);
     TEST_ASSERT_EQUAL_INT(11, chars);
     out[chars] = '\0';
-    TEST_ASSERT_EQUAL_STRING("-2147483648", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("-2147483648", (char *)out);
 
     /* check that the buffer was not overflowed */
     TEST_ASSERT_EQUAL_STRING("zzz", &out[12]);
@@ -334,13 +334,13 @@ static void test_fmt_s64_dec_a(void)
     chars = fmt_s64_dec(out, val);
     TEST_ASSERT_EQUAL_INT(4, chars);
     out[chars] = '\0';
-    TEST_ASSERT_EQUAL_STRING("9876", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("9876", (char *)out);
 
     val = -9876;
     chars = fmt_s64_dec(out, val);
     TEST_ASSERT_EQUAL_INT(5, chars);
     out[chars] = '\0';
-    TEST_ASSERT_EQUAL_STRING("-9876", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("-9876", (char *)out);
 
     /* check that the buffer was not overflowed */
     TEST_ASSERT_EQUAL_STRING("zzzzzzzzzzzzzzzzz", &out[6]);
@@ -355,13 +355,13 @@ static void test_fmt_s64_dec_b(void)
     chars = fmt_s64_dec(out, val);
     TEST_ASSERT_EQUAL_INT(10, chars);
     out[chars] = '\0';
-    TEST_ASSERT_EQUAL_STRING("2147483647", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("2147483647", (char *)out);
 
     val = -2147483648;
     chars = fmt_s64_dec(out, val);
     TEST_ASSERT_EQUAL_INT(11, chars);
     out[chars] = '\0';
-    TEST_ASSERT_EQUAL_STRING("-2147483648", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("-2147483648", (char *)out);
 
     /* check that the buffer was not overflowed */
     TEST_ASSERT_EQUAL_STRING("zzzzzzzzzzz", &out[12]);
@@ -376,7 +376,7 @@ static void test_fmt_s64_dec_c(void)
     chars = fmt_s64_dec(out, val);
     TEST_ASSERT_EQUAL_INT(19, chars);
     out[chars] = '\0';
-    TEST_ASSERT_EQUAL_STRING("9223372036854775807", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("9223372036854775807", (char *)out);
 
     /* typing -9223372036854775808 as a decimal literal causes a compiler warning
      * "integer constant is so large that it is unsigned"
@@ -387,7 +387,7 @@ static void test_fmt_s64_dec_c(void)
     chars = fmt_s64_dec(out, val);
     TEST_ASSERT_EQUAL_INT(20, chars);
     out[chars] = '\0';
-    TEST_ASSERT_EQUAL_STRING("-9223372036854775808", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("-9223372036854775808", (char *)out);
 
     /* check that the buffer was not overflowed */
     TEST_ASSERT_EQUAL_STRING("zz", &out[21]);
@@ -402,7 +402,7 @@ static void test_fmt_u64_dec_a(void)
     chars = fmt_u64_dec(out, val);
     TEST_ASSERT_EQUAL_INT(1, chars);
     out[chars] = '\0';
-    TEST_ASSERT_EQUAL_STRING("0", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("0", (char *)out);
 
     /* check that the buffer was not overflowed */
     TEST_ASSERT_EQUAL_STRING("zzzzzzzzzzzzzzzzzzzzz", &out[2]);
@@ -417,7 +417,7 @@ static void test_fmt_u64_dec_b(void)
     chars = fmt_u64_dec(out, val);
     TEST_ASSERT_EQUAL_INT(20, chars);
     out[chars] = '\0';
-    TEST_ASSERT_EQUAL_STRING("18446744073709551615", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("18446744073709551615", (char *)out);
 
     /* check that the buffer was not overflowed */
     TEST_ASSERT_EQUAL_STRING("zz", &out[21]);
@@ -432,7 +432,7 @@ static void test_fmt_u64_dec_c(void)
     chars = fmt_u64_dec(out, val);
     TEST_ASSERT_EQUAL_INT(19, chars);
     out[chars] = '\0';
-    TEST_ASSERT_EQUAL_STRING("1234567890123456789", (char *) out);
+    TEST_ASSERT_EQUAL_STRING("1234567890123456789", (char *)out);
 
     /* check that the buffer was not overflowed */
     TEST_ASSERT_EQUAL_STRING("zzz", &out[20]);
@@ -776,7 +776,7 @@ static void test_fmt_strnlen(void)
 static void test_fmt_str(void)
 {
     const char *string1 = "string1";
-    char string2[]      = "StRiNg2";
+    char string2[] = "StRiNg2";
 
     TEST_ASSERT_EQUAL_INT(fmt_strlen(string1), fmt_str(&string2[0], string1));
     TEST_ASSERT_EQUAL_STRING(string1, &string2[0]);
@@ -794,8 +794,8 @@ static void test_fmt_char(void)
 
 static void test_fmt_to_lower(void)
 {
-    const char string_up[]  = "AbCdeFGHijkLM";
-    char string[]           = "zzzzzzzzzzzzzzz";
+    const char string_up[] = "AbCdeFGHijkLM";
+    char string[] = "zzzzzzzzzzzzzzz";
 
     TEST_ASSERT_EQUAL_INT(fmt_strlen(string_up), fmt_to_lower(string, string_up));
     string[fmt_strlen(string_up)] = '\0';
@@ -823,6 +823,49 @@ static void test_scn_u32_hex(void)
     TEST_ASSERT_EQUAL_INT(val1, scn_u32_hex(string1, 9));
 }
 
+/* The doc on scn_u32_hex say:
+ * Will convert up to n digits.
+ */
+static void test_scn_u32_hex_ignore_invalid_n(void)
+{
+    const char *regular_string = "1234";
+    uint32_t zero = 0x0;
+    TEST_ASSERT_EQUAL_INT(zero, scn_u32_hex(regular_string, 0));
+}
+
+/* The doc on scn_u32_hex say:
+ * Will convert up to n digits. Stop at [..] '\0' character.
+ */
+static void test_scn_u32_hex_stop_on_null(void)
+{
+    const char *regular_string = "1234";
+    uint32_t regular = 0x1234;
+    /* Passed length exceeds string length, checking the \0 limit */
+    TEST_ASSERT_EQUAL_INT(regular, scn_u32_hex(regular_string, 10));
+
+    const char *extra_null_string = "1\0234";
+    uint32_t extra_null = 0x1;
+    TEST_ASSERT_EQUAL_INT(extra_null, scn_u32_hex(extra_null_string, 5));
+}
+
+/* The doc on scn_u32_hex say:
+ * Will convert up to n digits. Stop at any non-hexadecimal [..].
+ */
+static void test_scn_u32_hex_stop_on_non_hex(void)
+{
+    const char *non_hex_character_start = "Z1234";
+    uint32_t non_hex_character_start_value = 0x0;
+    TEST_ASSERT_EQUAL_INT(non_hex_character_start_value, scn_u32_hex(non_hex_character_start, 5));
+
+    const char *non_hex_character_start_2 = ":FF:";
+    uint32_t non_hex_character_start_value_2 = 0x0;
+    TEST_ASSERT_EQUAL_INT(non_hex_character_start_value_2, scn_u32_hex(non_hex_character_start_2, 5));
+
+    const char *non_hex_character_string = "12T34";
+    uint32_t non_hex_character = 0x12;
+    TEST_ASSERT_EQUAL_INT(non_hex_character, scn_u32_hex(non_hex_character_string, 5));
+}
+
 static void test_fmt_lpad(void)
 {
     const char base[] = "abcd";
@@ -832,32 +875,32 @@ static void test_fmt_lpad(void)
 
     fmt_lpad(string, 4, 8, ' ');
 
-    TEST_ASSERT_EQUAL_STRING("    abcd", (char*)string);
+    TEST_ASSERT_EQUAL_STRING("    abcd", (char *)string);
 
     fmt_lpad(string, 0, 0, '1');
 
-    TEST_ASSERT_EQUAL_STRING("    abcd", (char*)string);
+    TEST_ASSERT_EQUAL_STRING("    abcd", (char *)string);
 
     fmt_lpad(string, 4, 0, '2');
 
-    TEST_ASSERT_EQUAL_STRING("    abcd", (char*)string);
+    TEST_ASSERT_EQUAL_STRING("    abcd", (char *)string);
 
     fmt_lpad(string, 0, 4, '3');
 
-    TEST_ASSERT_EQUAL_STRING("3333abcd", (char*)string);
+    TEST_ASSERT_EQUAL_STRING("3333abcd", (char *)string);
 
     fmt_lpad(string, 8, 8, '4');
 
-    TEST_ASSERT_EQUAL_STRING("3333abcd", (char*)string);
+    TEST_ASSERT_EQUAL_STRING("3333abcd", (char *)string);
 
     fmt_lpad(string, 4, 8, 'x');
 
-    TEST_ASSERT_EQUAL_STRING((char*)string, "xxxx3333");
+    TEST_ASSERT_EQUAL_STRING((char *)string, "xxxx3333");
 }
 
 Test *tests_fmt_tests(void)
 {
-    EMB_UNIT_TESTFIXTURES(fixtures) {
+    EMB_UNIT_TESTFIXTURES(fixtures){
         new_TestFixture(test_fmt_is_x),
         new_TestFixture(test_fmt_byte_hex),
         new_TestFixture(test_fmt_bytes_hex),
@@ -886,6 +929,9 @@ Test *tests_fmt_tests(void)
         new_TestFixture(test_fmt_to_lower),
         new_TestFixture(test_scn_u32_dec),
         new_TestFixture(test_scn_u32_hex),
+        new_TestFixture(test_scn_u32_hex_ignore_invalid_n),
+        new_TestFixture(test_scn_u32_hex_stop_on_null),
+        new_TestFixture(test_scn_u32_hex_stop_on_non_hex),
         new_TestFixture(test_fmt_lpad),
     };
 
