@@ -40,17 +40,61 @@ fn calc_validate_args(args: Option<&[u8; 128]>) -> bool {
     }
     let raw = args.unwrap();
     let mut decoder = Decoder::new(raw.as_ref());
-    decoder.array();
-    decoder.map();
-    let a_key = decoder.str().unwrap();
-    let a_name = decoder.str().unwrap();
-    decoder.array();
-    decoder.map();
-    let b_key = decoder.str().unwrap();
-    let b_name = decoder.str().unwrap();
-    println!("[{{{a_key:?}:{a_name:?}}}, {{{b_key:?}{b_name:?}}}]");
-    false
-    
+    if decoder.array().is_err() {
+        println!("Arg doesn't start with an array");
+        return false;
+    }
+    if decoder.map().is_err() {
+        println!("Arg doesn't contain at least one map");
+        return false;
+    }
+    let a_key = {
+        match decoder.str() {
+            Ok(val) => val,
+            Err(err) => {
+                println!("error key a");
+                return false;
+            }
+        }
+    };
+
+    let a_name = {
+        match decoder.str() {
+            Ok(val) => val,
+            Err(err) => {
+                println!("error name a");
+                return false;
+            }
+        }
+    };
+    decoder.skip();
+    if decoder.map().is_err() { 
+        println!("Arg doesn't contain at least two maps");
+        return false;
+    }
+    let b_key = {
+        match decoder.str() {
+            Ok(val) => val,
+            Err(err) => {
+                println!("error key b: {err}");
+                "b_key"
+                //return false;
+            }
+        }
+    };
+
+    let b_name = {
+        match decoder.str() {
+            Ok(val) => val,
+            Err(err) => {
+                println!("error name b: {err}");
+                "b_name"
+                //return false;
+            }
+        }
+    };
+    println!("[{{{a_key:?}:{a_name:?}}}, {{{b_key:?}:{b_name:?}}}]");
+    true
 }
 
 
