@@ -1,0 +1,16 @@
+[package]
+name = "riot-module-cborshell"
+version = "0.1.0"
+edition = "2021"
+
+authors = ["Bennet Blischke"]
+license = "LGPL-2.1-only"
+
+# Shipped with RIOT-OS; this has no external API that would make
+# sense to consume in any context than from within RIOT
+publish = false
+
+[dependencies]
+riot-wrappers = { version = "^0.8" } # esp. the git version: fixes mutex bug
+riot-sys = "0.7"
+minicbor = "0.19"
