@@ -206,7 +206,7 @@ CFLAGS += -D_CONST=const
 
 # TODO no relaxation yet
 ifneq (,$(filter riscv%,$(TARGET_ARCH)))
-  CFLAGS += -mno-relax -march=rv32imc -mabi=ilp32 -DRISCV_NO_RELAX
+  CFLAGS += -mno-relax -march=rv32imc_zicsr -mabi=ilp32 -DRISCV_NO_RELAX
 endif
 
 ifneq (,$(filter xtensa%,$(TARGET_ARCH)))

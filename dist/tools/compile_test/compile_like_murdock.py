@@ -136,15 +136,24 @@ def _end(sec, job):
 
 def __exec_cmd(cmd, shell=False, env=None, cwd=None,
                stderr=subprocess.DEVNULL):
-    out = subprocess.run(
-        cmd,
-        shell=shell,
-        env=env,
-        cwd=cwd,
-        stderr=stderr,
-        check=True,
-        stdout=subprocess.PIPE,
-    ).stdout
+    try:
+        out = subprocess.run(
+            cmd,
+            shell=shell,
+            env=env,
+            cwd=cwd,
+            stderr=stderr,
+            check=True,
+            stdout=subprocess.PIPE,
+        ).stdout
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to run:{cmd} in {cwd}")
+        print(e)
+        exit(-1)
+    except NotADirectoryError as e:
+        print(f"Failed to run:{cmd} in {cwd}")
+        print(e)
+        return ""
     return out.decode("utf-8", errors="replace")
 
 

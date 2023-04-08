@@ -137,6 +137,10 @@ extern "C" {
 #define CONFIG_BT_SOC_SUPPORT_5_0                       1
 #endif
 
+#define CONFIG_ESP_SYSTEM_PMP_IDRAM_SPLIT               0
+#define CONFIG_ESP_SYSTEM_MEMPROT_FEATURE               0   /* default enabled */
+#define CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK          0   /* default enabled */
+
 #ifdef __cplusplus
 }
 #endif

@@ -38,7 +38,7 @@ CFLAGS += -Wno-cast-align
 ifneq (,$(filter riscv32%,$(TARGET_ARCH)))
   INCLUDES += -I$(ESP32_SDK_DIR)/components/riscv/include
   CFLAGS += -DCONFIG_IDF_TARGET_ARCH_RISCV
-  CFLAGS += -march=rv32imc
+  CFLAGS += -march=rv32imc_zicsr
   CFLAGS += -Wno-error=format=
   CFLAGS += -nostartfiles
   CFLAGS += -Wno-format

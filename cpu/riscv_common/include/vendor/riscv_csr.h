@@ -137,6 +137,21 @@
 #define VM_SV39  9
 #define VM_SV48  10
 
+#define PMP_R     0x01
+#define PMP_W     0x02
+#define PMP_X     0x04
+#define PMP_A     0x18
+#define PMP_L     0x80
+#define PMP_DUMMY 0x00
+#define PMP_SHIFT 2
+
+#define PMP_TOR   0x08
+#define PMP_NA4   0x10
+#define PMP_NAPOT 0x18
+
+#define CSR_PMPCFG0 0x3A0
+#define CSR_PMPADDR0 0x3B0
+
 #define IRQ_S_SOFT   1
 #define IRQ_H_SOFT   2
 #define IRQ_M_SOFT   3
@@ -190,14 +205,14 @@
 #ifdef __GNUC__
 
 #define read_csr(reg) ({ unsigned long __tmp; \
-  __asm__ volatile ("csrr %0, " #reg : "=r"(__tmp)); \
+  __asm__ volatile ("csrr %0, " _CSR_STRINGIFY(reg) : "=r"(__tmp)); \
   __tmp; })
 
 #define write_csr(reg, val) ({ \
   if (__builtin_constant_p(val) && (unsigned long)(val) < 32) \
-    __asm__ volatile ("csrw " #reg ", %0" :: "i"(val)); \
+    __asm__ volatile ("csrw "_CSR_STRINGIFY(reg) ", %0" :: "i"(val)); \
   else \
-    __asm__ volatile ("csrw " #reg ", %0" :: "r"(val)); })
+    __asm__ volatile ("csrw " _CSR_STRINGIFY(reg) ", %0" :: "r"(val)); })
 
 #define swap_csr(reg, val) ({ unsigned long __tmp; \
   if (__builtin_constant_p(val) && (unsigned long)(val) < 32) \
@@ -208,17 +223,27 @@
 
 #define set_csr(reg, bit) ({ unsigned long __tmp; \
   if (__builtin_constant_p(bit) && (unsigned long)(bit) < 32) \
-    __asm__ volatile ("csrrs %0, " #reg ", %1" : "=r"(__tmp) : "i"(bit)); \
+    __asm__ volatile ("csrrs %0, " _CSR_STRINGIFY(reg) ", %1" : "=r"(__tmp) : "i"(bit)); \
   else \
-    __asm__ volatile ("csrrs %0, " #reg ", %1" : "=r"(__tmp) : "r"(bit)); \
+    __asm__ volatile ("csrrs %0, " _CSR_STRINGIFY(reg) ", %1" : "=r"(__tmp) : "r"(bit)); \
   __tmp; })
 
 #define clear_csr(reg, bit) ({ unsigned long __tmp; \
   if (__builtin_constant_p(bit) && (unsigned long)(bit) < 32) \
-    __asm__ volatile ("csrrc %0, " #reg ", %1" : "=r"(__tmp) : "i"(bit)); \
+    __asm__ volatile ("csrrc %0, " _CSR_STRINGIFY(reg) ", %1" : "=r"(__tmp) : "i"(bit)); \
   else \
-    __asm__ volatile ("csrrc %0, " #reg ", %1" : "=r"(__tmp) : "r"(bit)); \
+    __asm__ volatile ("csrrc %0, " _CSR_STRINGIFY(reg) ", %1" : "=r"(__tmp) : "r"(bit)); \
   __tmp; })
+
+
+#define _CSR_STRINGIFY(REG) #REG /* needed so the 'reg' argument can be a macro or a register name */
+
+#define PMP_ENTRY_SET(ENTRY, ADDR, CFG) do {  \
+    write_csr((CSR_PMPADDR0) + (ENTRY), (ADDR) >> (PMP_SHIFT));    \
+    clear_csr((CSR_PMPCFG0) + (ENTRY)/4, ((~CFG)&0xFF) << (ENTRY%4)*8); \
+    set_csr((CSR_PMPCFG0) + (ENTRY)/4, ((CFG)&0xFF) << (ENTRY%4)*8); \
+    } while(0)
+
 
 #define rdtime() read_csr(time)
 #define rdcycle() read_csr(cycle)

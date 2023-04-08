@@ -17,6 +17,7 @@
  * @}
  */
 
+#include <stdio.h>
 #include <inttypes.h>
 
 #include "kernel_defines.h"
@@ -24,6 +25,7 @@
 #include "periph/pm.h"
 
 #include "esp_attr.h"
+#include "riscv/interrupt.h"
 #include "riscv/rvruntime-frames.h"
 #include "rom/ets_sys.h"
 
@@ -42,10 +44,17 @@ static const char *exceptions[] = {
     "0xb: ECALL from M mode",
 };
 
+void handler(void *) {
+    printf("WUHU!\n\n\n\n");
+}
+
 static RvExcFrame *_frame = NULL;
 
-void init_exceptions (void)
+void init_exceptions(void)
 {
+    ets_printf("Init exceptions.....................................");
+    intr_handler_set(0x17, handler, NULL);
+    ets_printf("..Done\n");
 }
 
 void IRAM_ATTR xt_unhandled_exception(RvExcFrame *frame)
