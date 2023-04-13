@@ -165,8 +165,8 @@ int main(void)
     printf("You are running RIOT on a(n) %s board.\n", RIOT_BOARD);
     printf("This board features a(n) %s MCU.\n", RIOT_MCU);
     printf("Memory address start: 0x%08lX, stopp: 0x%08lX\n", (uint32_t) memory, (uint32_t) &memory[SIZE]);
-    //for(int i = 0; i < 16; i++)
-    //    print_pmp_reg(i);
+    for(int i = 0; i < 16; i++)
+        print_pmp_reg(i);
     for (int i = 0; i < SIZE; i++)
     {
         memory[i] = 0;

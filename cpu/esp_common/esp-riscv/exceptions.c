@@ -54,6 +54,7 @@ void init_exceptions(void)
 {
     ets_printf("Init exceptions.....................................");
     intr_handler_set(0x17, handler, NULL);
+    exception_handler_set(0x07, handler, NULL);
     ets_printf("..Done\n");
 }
 
@@ -73,10 +74,11 @@ extern void heap_stats(void);
 
 void panic_arch(void)
 {
+    ets_printf("Panic arch\n");
     if (_frame) {
         /* TODO */
-        ets_printf("Exception @0x%08"PRIx32", cause %s\n",
-                   _frame->mepc, exceptions[_frame->mcause]);
+        ets_printf("Exception @0x%08"PRIx32", cause %s(%d)\n",
+                   _frame->mepc, exceptions[_frame->mcause], _frame->mcause);
     }
 #if defined(DEVELHELP)
     heap_stats();
