@@ -319,6 +319,13 @@ PSEUDOMODULES += malloc_tracing
 ## the Memory Protection Unit will be configured to detect stack overflows.
 PSEUDOMODULES += mpu_stack_guard
 
+## @defgroup pseudomodule_pmp_stack_guard pmp_stack_guard
+## @brief PMP based stack guard
+##
+## When this module is active (which it is by default on supported MCUs),
+## the Physical Memory Protection will be configured to detect stack overflows.
+PSEUDOMODULES += pmp_stack_guard
+
 ## @defgroup pseudomodule_mpu_noexec_ram mpu_noexec_ram
 ## @{
 ## @brief Mark RAM as non-executable using the MPU

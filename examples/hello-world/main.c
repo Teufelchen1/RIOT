@@ -21,12 +21,13 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "riscv/csr.h"
-#include "syscalls.h"
+#include "vendor/riscv_csr.h"
+//#include "syscalls.h"
 
 #define CONFIG_ESP_SYSTEM_PANIC_PRINT_HALT
 #define ESP_LOG_VERBOSE
 #define CONFIG_APP_BUILD_BOOTLOADER 1
+#define RV_READ_CSR read_csr
 
 #define SIZE 16
 
@@ -161,37 +162,42 @@ int main(void)
 {
     unsigned char memory[SIZE];
     puts("Hello World!");
-    system_wdt_stop();
+    //system_wdt_stop();
     printf("You are running RIOT on a(n) %s board.\n", RIOT_BOARD);
     printf("This board features a(n) %s MCU.\n", RIOT_MCU);
     printf("Memory address start: 0x%08lX, stopp: 0x%08lX\n", (uint32_t) memory, (uint32_t) &memory[SIZE]);
-    for(int i = 0; i < 16; i++)
-        print_pmp_reg(i);
+
+    __asm__ volatile ("csrw 0x3A0, %0" :: "i"(PMP_TOR | PMP_R | PMP_W | PMP_X));
+
+    //for(int i = 0; i < 16; i++)
+    //    print_pmp_reg(i);
+    print_pmp_reg(0);
     for (int i = 0; i < SIZE; i++)
     {
         memory[i] = 0;
     }
+    PMP_ENTRY_SET(0, 0x80000620, PMP_L |PMP_TOR | PMP_R | PMP_W | PMP_X);
 
-    /* 0x00000000 - SOC_DEBUG_LOW: Denied */
-    PMP_ENTRY_SET(0, 0x20000000, PMP_TOR);
+    ///* 0x00000000 - SOC_DEBUG_LOW: Denied */
+    //PMP_ENTRY_SET(0, 0x20000000, PMP_TOR);
+//
+    ///* SOC_DEBUG_LOW - SOC_DEBUG_HIGH: RWX */
+    //PMP_ENTRY_SET(1, 0x28000000, PMP_TOR | PMP_R | PMP_W | PMP_X);
+//
+    ///* SOC_DEBUG_HIGH - SOC_DROM_LOW: Denied */
+    //PMP_ENTRY_SET(2, 0x3C000000, PMP_TOR);
+//
+    ///* SOC_DROM_LOW - SOC_DRAM_LOW: R */
+    //PMP_ENTRY_SET(3, 0x3FC80000, PMP_TOR | PMP_R);
+//
+    //PMP_ENTRY_SET(4, (int) memory, PMP_TOR | PMP_R | PMP_W);
+//
+    //PMP_ENTRY_SET(5, (int) &memory[SIZE], PMP_TOR | PMP_R);
+//
+    ///* SOC_DRAM_LOW - SOC_DRAM_HIGH: RW */
+    //PMP_ENTRY_SET(6, 0x3FCE0000, PMP_TOR | PMP_R | PMP_W);
 
-    /* SOC_DEBUG_LOW - SOC_DEBUG_HIGH: RWX */
-    PMP_ENTRY_SET(1, 0x28000000, PMP_TOR | PMP_R | PMP_W | PMP_X);
-
-    /* SOC_DEBUG_HIGH - SOC_DROM_LOW: Denied */
-    PMP_ENTRY_SET(2, 0x3C000000, PMP_TOR);
-
-    /* SOC_DROM_LOW - SOC_DRAM_LOW: R */
-    PMP_ENTRY_SET(3, 0x3FC80000, PMP_TOR | PMP_R);
-
-    PMP_ENTRY_SET(4, (int) memory, PMP_TOR | PMP_R | PMP_W);
-
-    PMP_ENTRY_SET(5, (int) &memory[SIZE], PMP_TOR | PMP_R);
-
-    /* SOC_DRAM_LOW - SOC_DRAM_HIGH: RW */
-    PMP_ENTRY_SET(6, 0x3FCE0000, PMP_TOR | PMP_R | PMP_W);
-
-    print_pmp_reg(5);
+    print_pmp_reg(0);
     //for(int i = 0; i < 16; i++)
     //    print_pmp_reg(i);
 

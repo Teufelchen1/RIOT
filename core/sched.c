@@ -36,6 +36,10 @@
 #include "mpu.h"
 #endif
 
+#ifdef MODULE_PMP_STACK_GUARD
+#include "pmp.h"
+#endif
+
 #define ENABLE_DEBUG 0
 #include "debug.h"
 
@@ -217,6 +221,11 @@ thread_t *__attribute__((used)) sched_run(void)
             (uintptr_t)next_thread->stack_start + 31,       /* Base Address (rounded up) */
             MPU_ATTR(1, AP_RO_RO, 0, 1, 0, 1, MPU_SIZE_32B) /* Attributes and Size */
             );
+#endif
+#ifdef MODULE_PMP_STACK_GUARD
+        printf("New thread stack: %p\n", next_thread->stack_start);
+        //pmp_configure(0, (uintptr_t)next_thread->stack_start, PMP_TOR | PMP_R | PMP_W);
+        //pmp_configure(0, (uintptr_t)next_thread->stack_start + 1023, PMP_TOR | PMP_R);
 #endif
         DEBUG("sched_run: done, changed sched_active_thread.\n");
     }

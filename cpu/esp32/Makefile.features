@@ -44,6 +44,7 @@ else ifneq (,$(filter esp32c3 esp32s3,$(CPU_FAM)))
   FEATURES_PROVIDED += ble_phy_2mbit
   FEATURES_PROVIDED += esp_ble
   FEATURES_PROVIDED += esp_ble_esp32c3
+  FEATURES_PROVIDED += riscv_pmp
 endif
 
 ifneq (,$(filter esp32-wrover% esp32s2%r2 esp32s3%r2 esp32s3%r8 esp32s3%r8v,$(CPU_MODEL)))

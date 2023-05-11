@@ -20,12 +20,15 @@
 #include "cpu.h"
 #include "cpu_conf_common.h"
 #include "periph_cpu_common.h"
+#include "pmp.h"
+
+extern unsigned _sp;
+
 
 #ifdef MODULE_PUF_SRAM
 #include "puf_sram.h"
 
 extern unsigned _sheap;
-
 void riscv_puf_sram_init(void)
 {
     puf_sram_init((uint8_t *)&_sheap, SEED_RAM_LEN);
@@ -45,4 +48,8 @@ void riscv_init(void)
 {
     riscv_fpu_init();
     riscv_irq_init();
+#ifdef MODULE_PMP_STACK_GUARD
+    //pmp_configure(0, (uintptr_t)&_sp + 31, PMP_TOR | PMP_R | PMP_W);
+    //pmp_configure(0, 0x80003e80, PMP_L|PMP_TOR | PMP_R);
+#endif
 }

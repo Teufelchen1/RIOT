@@ -12,8 +12,9 @@ RIOTBASE ?= $(CURDIR)/../..
 # development process:
 DEVELHELP = 1
 
-USEMODULE += esp_log_startup
-USEMODULE += esp_log_tagged
+#USEMODULE += esp_log_startup
+#USEMODULE += esp_log_tagged
+USEMODULE += pmp_stack_guard
 
 CFLAGS += -Wno-enum-conversion
 CFLAGS += -Wno-attributes

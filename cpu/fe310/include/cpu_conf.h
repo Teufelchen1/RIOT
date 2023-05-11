@@ -36,6 +36,9 @@ extern "C" {
  */
 #define PLIC_BASE_ADDR      (PLIC_CTRL_ADDR)
 
+// TODO: Check cpu model
+#define __PMP_PRESENT          1 
+
 #ifdef __cplusplus
 }
 #endif
