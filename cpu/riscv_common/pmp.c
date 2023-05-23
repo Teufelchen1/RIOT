@@ -138,6 +138,7 @@ void print_pmp_reg(int num) {
         }
     } else if (strcmp(A, "NA4") == 0) {
         lower_addr = addr;
+        addr += 4;
     } else {
         uint32_t size = 8;
         for (int i = 0; (addr >> (PMP_SHIFT + i)) & 0b01; i++) {

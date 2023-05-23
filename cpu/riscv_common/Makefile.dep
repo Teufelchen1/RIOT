@@ -5,6 +5,10 @@ ifneq (,$(filter newlib,$(USEMODULE)))
   USEMODULE += newlib_syscalls_default
 endif
 
+ifneq (,$(filter mprotect,$(USEMODULE)))
+  USEMODULE += mprotect_riscv
+endif
+
 # Tell the build system that the CPU depends on the risc-v common files:
 USEMODULE += riscv_common
 

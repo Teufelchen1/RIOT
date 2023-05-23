@@ -44,6 +44,10 @@ ifneq (,$(filter libc_gettimeofday,$(USEMODULE)))
   USEMODULE += ztimer64_usec
 endif
 
+ifneq (,$(filter mprotect,$(USEMODULE)))
+  USEMODULE += mprotect_native
+endif
+
 USEMODULE += periph
 
 # UART is needed by startup.c

@@ -21,6 +21,8 @@
 #ifndef PMP_H
 #define PMP_H
 
+#include "vendor/riscv_csr.h"
+
 #include <stdbool.h>
 #include <stdint.h>
 

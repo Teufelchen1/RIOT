@@ -30,6 +30,10 @@ ifneq (,$(filter native_cli_eui_provider,$(USEMODULE)))
   DIRS += cli_eui_provider
 endif
 
+ifneq (,$(filter mprotect,$(USEMODULE)))
+  DIRS += mprotect_native
+endif
+
 include $(RIOTBASE)/Makefile.base
 
 INCLUDES = $(NATIVEINCLUDES)
