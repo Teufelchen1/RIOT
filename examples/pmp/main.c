@@ -29,7 +29,10 @@ int main(void)
     printf("You are running RIOT on a(n) %s board.\n", RIOT_BOARD);
     printf("This board features a(n) %s MCU.\n", RIOT_MCU);
 
-    print_pmpXcfg(2);
+    for (int i = 0; i < 16; i++)
+    {
+        print_pmpXcfg(i);
+    }
 
     return 0;
 }

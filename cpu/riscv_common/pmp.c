@@ -88,28 +88,46 @@ uint32_t read_pmpaddrX(int X) {
     return 0;
 }
 
+uint32_t get_NAPOT_baseaddr(uint32_t reg) {
+    (void) reg;
+    return 0;
+}
+
+uint32_t get_NAPOT_range(uint32_t reg) {
+    (void) reg;
+    return 0;
+}
+
 void print_pmpXcfg(int X) {
+    uint32_t start_addr = 0;
+    uint32_t stop_addr = 0;
 	uint8_t cfg = read_pmpXcfg(X);
 	if (cfg & PMP_L) {
 		printf("L ");
 	} else {
 		printf("- ");
 	}
-	switch ((cfg & PMP_A) >> 3) {
-	case PMP_OFF:
-		printf("OFF   ");
-		break;
-	case PMP_TOR:
-		printf("TOR   ");
-		break;
-	case PMP_NA4:
-		printf("NA4   ");
-		break;
-	case PMP_NAPOT:
-		printf("NAPOT ");
-		break;
-	default:
-		printf("???   ");
+	switch (cfg & PMP_A) {
+        case PMP_OFF:
+            printf("OFF   ");
+            break;
+        case PMP_TOR:
+            printf("TOR   ");
+            stop_addr = read_pmpaddrX(X);
+            start_addr = read_pmpaddrX(X-1);
+            break;
+        case PMP_NA4:
+            printf("NA4   ");
+            start_addr = read_pmpaddrX(X);
+            stop_addr = start_addr + 4;
+            break;
+        case PMP_NAPOT:
+            printf("NAPOT ");
+            start_addr = get_NAPOT_baseaddr(read_pmpaddrX(X));
+            stop_addr = get_NAPOT_range(read_pmpaddrX(X));
+            break;
+        default:
+            printf("???   ");
 	}
 	if (cfg & PMP_X) {
 		printf("X");
@@ -126,6 +144,7 @@ void print_pmpXcfg(int X) {
 	} else {
 		printf("-");
 	}
+    printf("0x%lX - 0x%lX", start_addr, stop_addr);
 	printf("\n");
 }
 
