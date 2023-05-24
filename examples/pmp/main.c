@@ -20,7 +20,17 @@
  */
 
 #include <stdio.h>
+#include <stdint.h>
 #include "vendor/pmp.h"
+
+void print_all_pmp_entries(void) {
+    for (int i = 0; i < 16; i++)
+    {
+        print_pmpXcfg(i);
+    }
+}
+
+static uint32_t test_var = 0xff;
 
 int main(void)
 {
@@ -29,10 +39,8 @@ int main(void)
     printf("You are running RIOT on a(n) %s board.\n", RIOT_BOARD);
     printf("This board features a(n) %s MCU.\n", RIOT_MCU);
 
-    for (int i = 0; i < 16; i++)
-    {
-        print_pmpXcfg(i);
-    }
+    print_all_pmp_entries();
+    set_pmpXcfg(13, &test_var, sizeof(test_var), PMP_R | PMP_W); 
 
     return 0;
 }

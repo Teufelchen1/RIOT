@@ -102,4 +102,6 @@ uint32_t read_pmpaddrX(int X);
 
 void print_pmpXcfg(int X);
 
+void set_pmpXcfg(int X, uint32_t *addr, uint32_t size, uint8_t mode);
+
 
