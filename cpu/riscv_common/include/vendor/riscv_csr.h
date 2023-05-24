@@ -189,8 +189,10 @@
 
 #ifdef __GNUC__
 
+#define _CSR_STRINGIFY(REG) #REG /* needed so the 'reg' argument can be a macro or a register name */
+
 #define read_csr(reg) ({ unsigned long __tmp; \
-  __asm__ volatile ("csrr %0, " #reg : "=r"(__tmp)); \
+  __asm__ volatile ("csrr %0, " _CSR_STRINGIFY(reg) : "=r"(__tmp)); \
   __tmp; })
 
 #define write_csr(reg, val) ({ \

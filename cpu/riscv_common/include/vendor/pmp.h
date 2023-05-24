@@ -18,7 +18,7 @@
 #define pmpcfg14 	0x3AE
 #define pmpcfg15 	0x3AF
 
-#define pmpaddr0	0x3B0
+#define pmpaddr0	(0x3B0)
 #define pmpaddr1	0x3B1
 #define pmpaddr2	0x3B2
 #define pmpaddr3	0x3B3
