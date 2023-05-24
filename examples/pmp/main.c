@@ -41,6 +41,7 @@ int main(void)
 
     print_all_pmp_entries();
     set_pmpXcfg(13, &test_var, sizeof(test_var), PMP_R | PMP_W); 
+    print_all_pmp_entries();
 
     return 0;
 }

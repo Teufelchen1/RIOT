@@ -265,6 +265,7 @@ void print_pmpXcfg(int X) {
 }
 
 void set_pmpXcfg(int X, uint32_t *addr, uint32_t size, uint8_t mode) {
+    printf("Size: %d\n", size);
     if (size == 4) {
         write_pmpaddrX(X, (uint32_t) addr);
         write_pmpXcfg(X, PMP_NA4 | mode);
