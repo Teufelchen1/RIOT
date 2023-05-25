@@ -16,7 +16,7 @@
  * @author      Ken Rabold
  * @}
  */
-
+#include "pmp.h"
 #include "clk.h"
 #include "cpu.h"
 #include "kernel_init.h"
@@ -113,4 +113,14 @@ void cpu_init(void)
 
     /* Initialize static peripheral */
     periph_init();
+
+#ifdef MODULE_PMP_NOEXEC_RAM
+    /* This marks the memory region from 0x80000000 to 0x80003FFF as non
+     * executable. This is the FE310 SRAM region used for on-chip RAM.
+     */
+    // TODO: use NAPOT instead
+    set_pmpXcfg(0, 0x80000000, PMP_L | PMP_TOR | PMP_R | PMP_W | PMP_X);
+    set_pmpXcfg(1, 0x80004000, PMP_L | PMP_TOR | PMP_R | PMP_W);
+
+#endif
 }

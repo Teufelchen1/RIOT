@@ -1,48 +1,178 @@
+#include "pmp.h"
 #include <stdio.h>
 #include <stdint.h>
-#include "vendor/pmp.h"
+#include <assert.h>
 
-uint32_t read_pmpcfgX(int X) {
-    switch (X) {
-        case 0:
-            return read_csr(pmpcfg0 + 0);
-        case 1:
-            return read_csr(pmpcfg0 + 1);
-        case 2:
-            return read_csr(pmpcfg0 + 2);
-        case 3:
-            return read_csr(pmpcfg0 + 3);
-        case 4:
-            return read_csr(pmpcfg0 + 4);
-        case 5:
-            return read_csr(pmpcfg0 + 5);
-        case 6:
-            return read_csr(pmpcfg0 + 6);
-        case 7:
-            return read_csr(pmpcfg0 + 7);
-        case 8:
-            return read_csr(pmpcfg0 + 8);
-        case 9:
-            return read_csr(pmpcfg0 + 9);
-        case 10:
-            return read_csr(pmpcfg0 + 10);
-        case 11:
-            return read_csr(pmpcfg0 + 11);
-        case 12:
-            return read_csr(pmpcfg0 + 12);
-        case 13:
-            return read_csr(pmpcfg0 + 13);
-        case 14:
-            return read_csr(pmpcfg0 + 14);
-        case 15:
-            return read_csr(pmpcfg0 + 15);
-    }
-    return 0;
+read_pmpcfg_macro(0)
+read_pmpcfg_macro(1)
+read_pmpcfg_macro(2)
+read_pmpcfg_macro(3)
+read_pmpcfg_macro(4)
+read_pmpcfg_macro(5)
+read_pmpcfg_macro(6)
+read_pmpcfg_macro(7)
+read_pmpcfg_macro(8)
+read_pmpcfg_macro(9)
+read_pmpcfg_macro(10)
+read_pmpcfg_macro(11)
+read_pmpcfg_macro(12)
+read_pmpcfg_macro(13)
+read_pmpcfg_macro(14)
+read_pmpcfg_macro(15)
+
+uint32_t (*read_pmpcfg_list[16])(void) = {
+    read_pmpcfg0,
+    read_pmpcfg1,
+    read_pmpcfg2,
+    read_pmpcfg3,
+    read_pmpcfg4,
+    read_pmpcfg5,
+    read_pmpcfg6,
+    read_pmpcfg7,
+    read_pmpcfg8,
+    read_pmpcfg9,
+    read_pmpcfg10,
+    read_pmpcfg11,
+    read_pmpcfg12,
+    read_pmpcfg13,
+    read_pmpcfg14,
+    read_pmpcfg15,
+};
+
+uint32_t read_pmpcfg(unsigned int reg_num) {
+    assert(reg_num < 16);
+    return read_pmpcfg_list[reg_num]();
+}
+
+
+write_pmpcfg_macro(0)
+write_pmpcfg_macro(1)
+write_pmpcfg_macro(2)
+write_pmpcfg_macro(3)
+write_pmpcfg_macro(4)
+write_pmpcfg_macro(5)
+write_pmpcfg_macro(6)
+write_pmpcfg_macro(7)
+write_pmpcfg_macro(8)
+write_pmpcfg_macro(9)
+write_pmpcfg_macro(10)
+write_pmpcfg_macro(11)
+write_pmpcfg_macro(12)
+write_pmpcfg_macro(13)
+write_pmpcfg_macro(14)
+write_pmpcfg_macro(15)
+
+void (*write_pmpcfg_list[16])(uint32_t value) = {
+    write_pmpcfg0,
+    write_pmpcfg1,
+    write_pmpcfg2,
+    write_pmpcfg3,
+    write_pmpcfg4,
+    write_pmpcfg5,
+    write_pmpcfg6,
+    write_pmpcfg7,
+    write_pmpcfg8,
+    write_pmpcfg9,
+    write_pmpcfg10,
+    write_pmpcfg11,
+    write_pmpcfg12,
+    write_pmpcfg13,
+    write_pmpcfg14,
+    write_pmpcfg15,
+};
+
+void write_pmpcfg(unsigned int reg_num, uint32_t value) {
+    assert(reg_num < 16);
+    write_pmpcfg_list[reg_num](value);
+}
+
+
+read_pmpaddr_macro(0)
+read_pmpaddr_macro(1)
+read_pmpaddr_macro(2)
+read_pmpaddr_macro(3)
+read_pmpaddr_macro(4)
+read_pmpaddr_macro(5)
+read_pmpaddr_macro(6)
+read_pmpaddr_macro(7)
+read_pmpaddr_macro(8)
+read_pmpaddr_macro(9)
+read_pmpaddr_macro(10)
+read_pmpaddr_macro(11)
+read_pmpaddr_macro(12)
+read_pmpaddr_macro(13)
+read_pmpaddr_macro(14)
+read_pmpaddr_macro(15)
+
+uint32_t (*read_pmpaddr_list[16])(void) = {
+    read_pmpaddr0,
+    read_pmpaddr1,
+    read_pmpaddr2,
+    read_pmpaddr3,
+    read_pmpaddr4,
+    read_pmpaddr5,
+    read_pmpaddr6,
+    read_pmpaddr7,
+    read_pmpaddr8,
+    read_pmpaddr9,
+    read_pmpaddr10,
+    read_pmpaddr11,
+    read_pmpaddr12,
+    read_pmpaddr13,
+    read_pmpaddr14,
+    read_pmpaddr15,
+};
+
+uint32_t read_pmpaddr(unsigned int reg_num) {
+    assert(reg_num < 16);
+    return read_pmpaddr_list[reg_num]() << 2;
+}
+
+
+write_pmpaddr_macro(0)
+write_pmpaddr_macro(1)
+write_pmpaddr_macro(2)
+write_pmpaddr_macro(3)
+write_pmpaddr_macro(4)
+write_pmpaddr_macro(5)
+write_pmpaddr_macro(6)
+write_pmpaddr_macro(7)
+write_pmpaddr_macro(8)
+write_pmpaddr_macro(9)
+write_pmpaddr_macro(10)
+write_pmpaddr_macro(11)
+write_pmpaddr_macro(12)
+write_pmpaddr_macro(13)
+write_pmpaddr_macro(14)
+write_pmpaddr_macro(15)
+
+void (*write_pmpaddr_list[16])(uint32_t) = {
+    write_pmpaddr0,
+    write_pmpaddr1,
+    write_pmpaddr2,
+    write_pmpaddr3,
+    write_pmpaddr4,
+    write_pmpaddr5,
+    write_pmpaddr6,
+    write_pmpaddr7,
+    write_pmpaddr8,
+    write_pmpaddr9,
+    write_pmpaddr10,
+    write_pmpaddr11,
+    write_pmpaddr12,
+    write_pmpaddr13,
+    write_pmpaddr14,
+    write_pmpaddr15,
+};
+
+void write_pmpaddr(unsigned int reg_num, uint32_t addr) {
+    assert(reg_num < 16);
+    write_pmpaddr_list[reg_num](addr >> 2);
 }
 
 uint8_t read_pmpXcfg(int X) {
 	/* e.g. getting pmp13cfg, X = 13; X/4 = 4; Select pmpcfg0 + 4; */
-	uint32_t value = read_pmpcfgX(X / 4);
+	uint32_t value = read_pmpcfg(X / 4);
 
 	/* In pmpcfg4, bits 0..7 are pmp12cfg, 7..15 are pmp13cfg */
 	/* 13 % 4 = 1; 1 * 8 = 8; shifting 8 bits to right */
@@ -50,225 +180,78 @@ uint8_t read_pmpXcfg(int X) {
 	return value & 0xFF;
 }
 
-void write_pmpcfgX(int X, uint32_t value) {
-    switch (X) {
-        case 0:
-            write_csr(pmpcfg0 + 0, value);
-            break;
-        case 1:
-            write_csr(pmpcfg0 + 1, value);
-            break;
-        case 2:
-            write_csr(pmpcfg0 + 2, value);
-            break;
-        case 3:
-            write_csr(pmpcfg0 + 3, value);
-            break;
-        case 4:
-            write_csr(pmpcfg0 + 4, value);
-            break;
-        case 5:
-            write_csr(pmpcfg0 + 5, value);
-            break;
-        case 6:
-            write_csr(pmpcfg0 + 6, value);
-            break;
-        case 7:
-            write_csr(pmpcfg0 + 7, value);
-            break;
-        case 8:
-            write_csr(pmpcfg0 + 8, value);
-            break;
-        case 9:
-            write_csr(pmpcfg0 + 9, value);
-            break;
-        case 10:
-            write_csr(pmpcfg0 + 10, value);
-            break;
-        case 11:
-            write_csr(pmpcfg0 + 11, value);
-            break;
-        case 12:
-            write_csr(pmpcfg0 + 12, value);
-            break;
-        case 13:
-            write_csr(pmpcfg0 + 13, value);
-            break;
-        case 14:
-            write_csr(pmpcfg0 + 14, value);
-            break;
-        case 15:
-            write_csr(pmpcfg0 + 15, value);
-            break;
+uint32_t _NAPOT_base(uint32_t addr) {
+    addr >>= 2;
+    uint32_t mask = 1;
+    while (addr & mask) {
+        addr &= ~mask;
+        mask <<= 1;
     }
-    return;
+    addr <<= 2;
+    return addr;
 }
 
-void write_pmpXcfg(int X, uint8_t value) {
-	uint32_t cur_value = read_pmpcfgX(X / 4);
-    uint32_t mask = 0xff << (X % 4) * 8;
-    cur_value &= ~mask;
-    cur_value |= value << (X % 4) * 8;
-    write_pmpcfgX(X / 4, cur_value);
-}
-
-uint32_t read_pmpaddrX(int X) {
-    switch (X) {
-        case 0:
-            return read_csr(pmpaddr0 + 0);
-        case 1:
-            return read_csr(pmpaddr0 + 1);
-        case 2:
-            return read_csr(pmpaddr0 + 2);
-        case 3:
-            return read_csr(pmpaddr0 + 3);
-        case 4:
-            return read_csr(pmpaddr0 + 4);
-        case 5:
-            return read_csr(pmpaddr0 + 5);
-        case 6:
-            return read_csr(pmpaddr0 + 6);
-        case 7:
-            return read_csr(pmpaddr0 + 7);
-        case 8:
-            return read_csr(pmpaddr0 + 8);
-        case 9:
-            return read_csr(pmpaddr0 + 9);
-        case 10:
-            return read_csr(pmpaddr0 + 10);
-        case 11:
-            return read_csr(pmpaddr0 + 11);
-        case 12:
-            return read_csr(pmpaddr0 + 12);
-        case 13:
-            return read_csr(pmpaddr0 + 13);
-        case 14:
-            return read_csr(pmpaddr0 + 14);
-        case 15:
-            return read_csr(pmpaddr0 + 15);
+uint32_t _NAPOT_range(uint32_t addr) {
+    uint32_t mask = 1;
+    addr >>= 2;
+    while (addr & mask) {
+        mask <<= 1;
     }
-    return 0;
+    return mask * 8;
 }
 
-void write_pmpaddrX(int X, uint32_t addr) {
-    switch (X) {
-        case 0:
-            write_csr(pmpaddr0 + 0, addr);
-            break;
-        case 1:
-            write_csr(pmpaddr0 + 1, addr);
-            break;
-        case 2:
-            write_csr(pmpaddr0 + 2, addr);
-            break;
-        case 3:
-            write_csr(pmpaddr0 + 3, addr);
-            break;
-        case 4:
-            write_csr(pmpaddr0 + 4, addr);
-            break;
-        case 5:
-            write_csr(pmpaddr0 + 5, addr);
-            break;
-        case 6:
-            write_csr(pmpaddr0 + 6, addr);
-            break;
-        case 7:
-            write_csr(pmpaddr0 + 7, addr);
-            break;
-        case 8:
-            write_csr(pmpaddr0 + 8, addr);
-            break;
-        case 9:
-            write_csr(pmpaddr0 + 9, addr);
-            break;
-        case 10:
-            write_csr(pmpaddr0 + 10, addr);
-            break;
-        case 11:
-            write_csr(pmpaddr0 + 11, addr);
-            break;
-        case 12:
-            write_csr(pmpaddr0 + 12, addr);
-            break;
-        case 13:
-            write_csr(pmpaddr0 + 13, addr);
-            break;
-        case 14:
-            write_csr(pmpaddr0 + 14, addr);
-            break;
-        case 15:
-            write_csr(pmpaddr0 + 15, addr);
-            break;
-    }
-    return;
-}
-
-uint32_t get_NAPOT_baseaddr(uint32_t reg) {
-    (void) reg;
-    return 0;
-}
-
-uint32_t get_NAPOT_range(uint32_t reg) {
-    (void) reg;
-    return 0;
-}
-
-void print_pmpXcfg(int X) {
-    uint32_t start_addr = 0;
-    uint32_t stop_addr = 0;
-	uint8_t cfg = read_pmpXcfg(X);
-	if (cfg & PMP_L) {
-		printf("L ");
-	} else {
-		printf("- ");
-	}
-	switch (cfg & PMP_A) {
-        case PMP_OFF:
-            printf("OFF   ");
-            break;
+void print_pmpXcfg(int reg_num) {
+    uint8_t cfg = read_pmpXcfg(reg_num);
+    uint32_t start = 0;
+    uint32_t stop = 0;
+    char *mode = "OFF  ";
+    switch (cfg & PMP_A) {
         case PMP_TOR:
-            printf("TOR   ");
-            stop_addr = read_pmpaddrX(X);
-            start_addr = read_pmpaddrX(X-1);
+            mode = "TOR  ";
+            start = (reg_num > 0) ? read_pmpaddr(reg_num - 1) : 0;
+            stop = read_pmpaddr(reg_num);
             break;
         case PMP_NA4:
-            printf("NA4   ");
-            start_addr = read_pmpaddrX(X);
-            stop_addr = start_addr + 4;
+            mode = "NA4  ";
+            start = read_pmpaddr(reg_num);
+            stop = start + 3;
             break;
         case PMP_NAPOT:
-            printf("NAPOT ");
-            start_addr = get_NAPOT_baseaddr(read_pmpaddrX(X));
-            stop_addr = get_NAPOT_range(read_pmpaddrX(X));
+            mode = "NAPOT";
+            uint32_t _tmp = read_pmpaddr(reg_num);
+            start = _NAPOT_base(_tmp);
+            stop = start + _NAPOT_range(_tmp);
             break;
-        default:
-            printf("???   ");
-	}
-	if (cfg & PMP_X) {
-		printf("X");
-	} else {
-		printf("-");
-	}
-	if (cfg & PMP_W) {
-		printf("W");
-	} else {
-		printf("-");
-	}
-	if (cfg & PMP_R) {
-		printf("R");
-	} else {
-		printf("-");
-	}
-    printf(" 0x%08lX - 0x%08lX", start_addr, stop_addr);
-	printf("\n");
+    }
+    printf("pmp%02dcfg: %c %c%c%c %s 0x%08x - 0x%08x\n",
+        reg_num,
+        (cfg & PMP_L) ? 'L' : '-',
+        (cfg & PMP_R) ? 'R' : '-',
+        (cfg & PMP_W) ? 'W' : '-',
+        (cfg & PMP_X) ? 'X' : '-',
+        mode,
+        (unsigned int)start,
+        (unsigned int)stop
+    );
 }
 
-void set_pmpXcfg(int X, uint32_t *addr, uint32_t size, uint8_t mode) {
-    printf("Size: %d\n", size);
-    if (size == 4) {
-        write_pmpaddrX(X, (uint32_t) addr);
-        write_pmpXcfg(X, PMP_NA4 | mode);
-    }
+void set_pmpXcfg(int reg_num, uintptr_t addr, uint8_t mode) {
+    /* TODO: Assert alignment */
+    write_pmpaddr(reg_num, (uint32_t) addr);
+    uint32_t _tmp = read_pmpcfg(reg_num / 4);
+    _tmp &= ~(0xff << (reg_num % 4) * 8); /* clear */
+    _tmp |= (mode << (reg_num % 4) * 8); /* set */
+    write_pmpcfg(reg_num / 4, _tmp);
+}
+
+uint32_t make_napot(uint32_t addr, uint32_t size) {
+    assert((size % 2) == 0);
+    assert(size >= 8);
+    assert((addr % size) == 0);
+    uint32_t mask = size/2;
+    addr &= ~size;
+    addr |= mask - 1;
+    printf("NAPUT %x\n", (unsigned int)addr);
+    return addr;
 }
 

@@ -22,7 +22,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+#define __PMP_PRESENT          1
 #ifdef __cplusplus
 }
 #endif
