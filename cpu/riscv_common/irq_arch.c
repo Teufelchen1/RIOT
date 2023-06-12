@@ -134,6 +134,10 @@ static void handle_trap(uword_t mcause)
             write_csr(mepc, return_pc + 4);
             break;
         }
+        case CAUSE_FAULT_FETCH:
+        case CAUSE_FAULT_LOAD:
+        case CAUSE_FAULT_STORE:
+            core_panic(PANIC_MEM_MANAGE, "MEM MANAGE HANDLER");
         default:
 #ifdef DEVELHELP
             printf("Unhandled trap:\n");
