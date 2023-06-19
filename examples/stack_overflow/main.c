@@ -27,7 +27,7 @@
 #include "msg.h"
 
 #define STACK_MARKER                (0x77777777)
-#define STACK_SIZE 1012
+#define STACK_SIZE 208
 char second_thread_stack[STACK_SIZE];
 
 /*
@@ -122,29 +122,8 @@ void print_stack(char *stack, size_t size) {
 void *second_thread(void *arg)
 {
     (void) arg;
-    uint32_t array[4] = { 0x88888888, 0x88888888, 0x88888888, 0x88888888};
-    register long unsigned tmp = 0;
-
-    //printf("2nd thread started, pid: %" PRIkernel_pid "\n", thread_getpid());
-    msg_t m;
-    //thread_t *t = thread_get_unchecked(thread_getpid());
-    __asm__ volatile ("mv %0, x2" : "=r" (tmp));
-    printf("msg_t m at: %08X\narray at: %08X\narray-end at: %08X\nStackpointer at: 0x%08lX\n",
-        (uintptr_t) &m,
-        (uintptr_t) array,
-        (uintptr_t) &array[3],
-        (long unsigned) tmp);
-
-    uintptr_t ptr = (uintptr_t)array;
-    *((uint32_t *)(ptr+11*4)) = 0xAAAAAAAA;
-    print_stack(second_thread_stack, STACK_SIZE);
-    while (1) {
-        msg_receive(&m);
-        //printf("2nd: Got msg from %" PRIkernel_pid "\n", m.sender_pid);
-        m.content.value++;
-        msg_reply(&m, &m);
-    }
-
+    uint8_t mem;
+    memcpy(mem, buff, )
     return NULL;
 }
 
