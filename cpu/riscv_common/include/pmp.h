@@ -22,6 +22,7 @@
 #ifndef PMP_H
 #define PMP_H
 
+#include <assert.h>
 #include <stdint.h>
 
 #ifdef __cplusplus

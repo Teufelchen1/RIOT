@@ -22,9 +22,6 @@
 #include "kernel_init.h"
 #include "periph/init.h"
 #include "periph_conf.h"
-#ifdef MODULE_PMP_NOEXEC_RAM
-#include "pmp.h"
-#endif
 
 #include "vendor/riscv_csr.h"
 
@@ -110,18 +107,6 @@ void cpu_init(void)
 
     /* Common RISC-V initialization */
     riscv_init();
-
-#ifdef MODULE_PMP_NOEXEC_RAM
-    /* This marks the complete RAM region from 0x80000000 to 0x80004000 as non
-     * executable. Using PMP entry 0.
-     *
-     * RAM starts at 2 GiB and is 16K in size
-     */
-    write_pmpaddr(0, make_napot(0x80000000, 0x4000));
-
-    /* Lock & select NAPOT, only allow write and read */
-    set_pmpcfg(0, PMP_L | PMP_NAPOT | PMP_W | PMP_R);
-#endif
 
     /* Initialize stdio */
     early_init();

@@ -11,7 +11,7 @@ from testrunner import run
 
 
 def testfunc(child):
-    child.expect_exact("MEM MANAGE HANDLER\r\n")
+    child.expect_exact("MEM MANAGE HANDLER (fetch)\r\n")
 
 
 if __name__ == "__main__":
