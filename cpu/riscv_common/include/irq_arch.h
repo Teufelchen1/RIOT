@@ -23,6 +23,7 @@
 #ifndef IRQ_ARCH_H
 #define IRQ_ARCH_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include "irq.h"
@@ -39,12 +40,28 @@ extern "C" {
 
 extern volatile int riscv_in_isr;
 
+static inline void __ecall_dispatch(uint32_t num, void *ctx)
+{
+    /* function arguments are in a0 and a1 as per ABI */
+    __asm__ volatile (
+        "add a0, x0, %[num] \n"
+        "add a1, x0, %[ctx] \n"
+        "ECALL\n"
+        : /* No outputs */
+        :[num] "r" (num), [ctx] "r" (ctx)
+        : "memory", "a0", "a1"
+        );
+}
+
 /**
  * @brief Enable all maskable interrupts
  */
 static inline __attribute__((always_inline)) unsigned int irq_enable(void)
 {
+    unsigned int value = 0;
+    //__ecall_dispatch(1, &value);
     /* Enable all interrupts */
+    
     unsigned state;
 
     __asm__ volatile (
@@ -54,6 +71,8 @@ static inline __attribute__((always_inline)) unsigned int irq_enable(void)
         : "memory"
         );
     return state;
+    
+   return value;
 }
 
 /**
@@ -61,7 +80,9 @@ static inline __attribute__((always_inline)) unsigned int irq_enable(void)
  */
 static inline __attribute__((always_inline)) unsigned int irq_disable(void)
 {
-
+   // unsigned int value = 0;
+    //__ecall_dispatch(2, &value);
+    
     unsigned int state;
 
     __asm__ volatile (
@@ -72,6 +93,8 @@ static inline __attribute__((always_inline)) unsigned int irq_disable(void)
         );
 
     return state;
+    
+   //return value;
 }
 
 /**
@@ -81,12 +104,15 @@ static inline __attribute__((always_inline)) void irq_restore(
     unsigned int state)
 {
     /* Restore all interrupts to given state */
+    //(void) state;
+    //__ecall_dispatch(3, &state);
+
     __asm__ volatile (
-        "csrw mstatus, %[state]"
-        : /* no outputs */
-        :[state]   "r" (state)
-        : "memory"
-        );
+       "csrw mstatus, %[state]"
+       : /* no outputs */
+       :[state]   "r" (state)
+       : "memory"
+       );
 }
 
 /**

@@ -32,7 +32,7 @@
 #include "bitarithm.h"
 #include "sched.h"
 
-#define ENABLE_DEBUG 0
+#define ENABLE_DEBUG 1
 #include "debug.h"
 
 thread_status_t thread_getstatus(kernel_pid_t pid)

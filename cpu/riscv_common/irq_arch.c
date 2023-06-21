@@ -31,11 +31,13 @@
 #include "plic.h"
 #include "clic.h"
 #include "architecture.h"
+#include "thread.h"
 
 #include "vendor/riscv_csr.h"
 
+#define MSTATUS_MPP_USER 0x00
 /* Default state of mstatus register */
-#define MSTATUS_DEFAULT     (MSTATUS_MPP | MSTATUS_MPIE)
+#define MSTATUS_DEFAULT     (MSTATUS_MPP_USER | MSTATUS_MPIE)
 
 volatile int riscv_in_isr = 0;
 
@@ -75,17 +77,54 @@ void riscv_irq_init(void)
     set_csr(mie, MIP_MEIP);
 
     /*  Set default state of mstatus */
-    set_csr(mstatus, MSTATUS_DEFAULT);
+    write_csr(mstatus, MSTATUS_DEFAULT);
 
     irq_enable();
+}
+
+// kernel_pid_t thread_create(char *stack, int stacksize, uint8_t priority,
+//                            int flags, thread_task_func_t function, void *arg,
+//                            const char *name)
+typedef struct {
+    char *stack;
+    int stacksize;
+    uint8_t priority;
+    int flags;
+    thread_task_func_t function;
+    void *arg;
+    const char *name;
+    kernel_pid_t pid;
+} tc_args;
+
+void thread_create_wrapper(tc_args * args){
+    args->pid = thread_create(
+        args->stack,
+        args->stacksize,
+        args->priority,
+        args->flags,
+        args->function,
+        args->arg,
+        args->name
+    );
+}
+
+void thread_yield_wrapper(void) {
+    unsigned old_state = irq_disable();
+    thread_t *me = thread_get_active();
+
+    if (me->status >= STATUS_ON_RUNQUEUE) {
+        sched_runq_advance(me->priority);
+    }
+    irq_restore(old_state);
 }
 
 /**
  * @brief Global trap and interrupt handler
  */
 __attribute((used))
-static void handle_trap(uword_t mcause)
+static void handle_trap(uword_t mcause, uword_t ecall_num, void *ecall_ctx)
 {
+    (void) ecall_ctx;
     /*  Tell RIOT to set sched_context_switch_request instead of
      *  calling thread_yield(). */
     riscv_in_isr = 1;
@@ -126,10 +165,58 @@ static void handle_trap(uword_t mcause)
         case CAUSE_USER_ECALL:      /* ECALL from user mode */
         case CAUSE_MACHINE_ECALL:   /* ECALL from machine mode */
         {
-            /* TODO: get the ecall arguments */
-            sched_context_switch_request = 1;
+            //printf("ECALL number: %ld\n", ecall_num);
+            // if(ecall_num == 1) {
+            //         unsigned int state;
+            //         /* enable irq */
+            //          __asm__ volatile (
+            //         "csrrs %[dest], mstatus, %[mask]"
+            //         :[dest]    "=r" (state)
+            //         :[mask]    "i" (MSTATUS_MIE)
+            //         : "memory"
+            //         );
+            //         * (unsigned int *) ecall_ctx = state;
+            // }
+            // if(ecall_num == 2) {
+            //         /* disable */
+            //         unsigned int state;
+            //         __asm__ volatile (
+            //         "csrrc %[dest], mstatus, %[mask]"
+            //         :[dest]    "=r" (state)
+            //         :[mask]    "i" (MSTATUS_MIE)
+            //         : "memory"
+            //         );
+            //         * (unsigned int *) ecall_ctx = state;
+            // }
+            // if(ecall_num == 3) {
+            //         /* restore */
+            //         unsigned int state = * (unsigned int *) ecall_ctx;
+            //         __asm__ volatile (
+            //             "csrw mstatus, %[state]"
+            //             : /* no outputs */
+            //             :[state]   "r" (state)
+            //             : "memory"
+            //             );
+            // }
+            if(ecall_num == 5) {
+                thread_create_wrapper(ecall_ctx);
+            }
+            if(ecall_num == 6) {
+                thread_yield_wrapper();
+                sched_context_switch_request = 1;
+            }
+            if(ecall_num == 4) {
+                    unsigned int state = * (unsigned int *) ecall_ctx;
+                    printf("Hello from ECALL: %d\n", state);
+                    state = 4;
+                    * (unsigned int *) ecall_ctx = state;
+            }
+            if(ecall_num == 0) { 
+                    /* TODO: get the ecall arguments */
+                    sched_context_switch_request = 1;
+            }
             /* Increment the return program counter past the ecall
-             * instruction */
+            * instruction */
             uword_t return_pc = read_csr(mepc);
             write_csr(mepc, return_pc + 4);
             break;
@@ -192,6 +279,9 @@ static void __attribute__((interrupt)) trap_entry(void)
         "mv s0, sp                                          \n"
         /* Load exception stack ptr */
         "la sp, _sp                                         \n"
+
+        "mv a2, a1 \n"
+        "mv a1, a0 \n"
 
         /* Get the interrupt cause */
         "csrr a0, mcause                                    \n"
@@ -298,4 +388,5 @@ static void __attribute__((interrupt)) trap_entry(void)
         :
         :
         );
+        clear_csr(mstatus, MSTATUS_MPP);
 }

@@ -82,7 +82,7 @@ static void *idle_thread(void *arg)
     (void)arg;
 
     while (1) {
-        pm_set_lowest();
+        //pm_set_lowest();
     }
 
     return NULL;
@@ -109,6 +109,7 @@ void kernel_init(void)
         irq_enable();
         main_trampoline(NULL);
     }
+
 
     cpu_switch_context_exit();
 }

@@ -25,6 +25,8 @@
 #include "pmp.h"
 #endif
 
+#include "pmp.h"
+
 #ifdef MODULE_PUF_SRAM
 #include "puf_sram.h"
 
@@ -49,6 +51,7 @@ void riscv_init(void)
 {
     riscv_fpu_init();
     riscv_irq_init();
+
 #ifdef MODULE_PMP_NOEXEC_RAM
     /* This marks the (main) RAM region as non
      * executable. Using PMP entry 0.
@@ -58,4 +61,13 @@ void riscv_init(void)
     /* Lock & select NAPOT, only allow write and read */
     set_pmpcfg(0, PMP_L | PMP_NAPOT | PMP_W | PMP_R);
 #endif
+
+    write_pmpaddr(0, make_napot(0x80000000, 0x4000));
+    set_pmpcfg(0, PMP_L | PMP_NAPOT | PMP_W | PMP_R);
+
+    write_pmpaddr(1, make_napot(0x20000000, 0x20000000));
+    set_pmpcfg(1, PMP_L | PMP_NAPOT | PMP_X | PMP_W | PMP_R);
+
+    write_pmpaddr(3, make_napot(0x10013000, 0x1000));
+    set_pmpcfg(3, PMP_L | PMP_NAPOT | PMP_W | PMP_R);
 }
