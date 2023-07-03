@@ -1,6 +1,9 @@
 # name of your application
 APPLICATION = hello-world
 
+USEMODULE += pmp_noexec_ram
+USEMODULE += pmp_stack_guard
+
 # If no BOARD is found in the environment, use this default:
 BOARD ?= native
 

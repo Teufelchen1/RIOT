@@ -84,7 +84,7 @@ void riscv_irq_init(void)
  * @brief Global trap and interrupt handler
  */
 __attribute((used))
-static void handle_trap(uword_t mcause)
+static void handle_trap(uword_t mcause, uword_t ecall)
 {
     /*  Tell RIOT to set sched_context_switch_request instead of
      *  calling thread_yield(). */
@@ -126,10 +126,16 @@ static void handle_trap(uword_t mcause)
         case CAUSE_USER_ECALL:      /* ECALL from user mode */
         case CAUSE_MACHINE_ECALL:   /* ECALL from machine mode */
         {
-            /* TODO: get the ecall arguments */
-            sched_context_switch_request = 1;
+            if (ecall == 0) {
+                /* TODO: get the ecall arguments */
+                sched_context_switch_request = 1;
+            } else if (ecall == 1) {
+                clear_csr(mstatus, MSTATUS_MPP);
+            } else if (ecall == 2) {
+                set_csr(mstatus, MSTATUS_MPP);
+            }
             /* Increment the return program counter past the ecall
-             * instruction */
+            * instruction */
             uword_t return_pc = read_csr(mepc);
             write_csr(mepc, return_pc + 4);
             break;
@@ -193,9 +199,10 @@ static void __attribute__((interrupt)) trap_entry(void)
         /* Load exception stack ptr */
         "la sp, _sp                                         \n"
 
+        /* ecall number is provided in a0 but expected in a1 in handle_trap */
+        "mv a1, a0                                          \n"
         /* Get the interrupt cause */
         "csrr a0, mcause                                    \n"
-
         /* Call trap handler, a0 contains mcause before, and the return value after
          * the call */
         "call handle_trap                                   \n"

@@ -26,6 +26,8 @@
 extern "C" {
 #endif
 
+extern volatile unsigned int sched_context_switch_request;
+
 #define THREAD_API_INLINED
 
 #ifndef DOXYGEN /* Doxygen is in core/include/thread.h */
@@ -51,6 +53,16 @@ static inline __attribute__((always_inline)) void thread_yield_higher(void)
     else {
         _ecall_dispatch(0, NULL);
     }
+}
+
+static inline __attribute__((always_inline)) void thread_drop_privilege(void)
+{
+    _ecall_dispatch(1, NULL);
+}
+
+static inline __attribute__((always_inline)) void thread_gain_privilege(void)
+{
+    _ecall_dispatch(2, NULL);
 }
 
 #endif /* DOXYGEN */

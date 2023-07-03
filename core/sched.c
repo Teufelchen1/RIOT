@@ -36,7 +36,11 @@
 #include "mpu.h"
 #endif
 
-#define ENABLE_DEBUG 0
+#ifdef MODULE_PMP_STACK_GUARD
+#include "pmp.h"
+#endif
+
+#define ENABLE_DEBUG 1
 #include "debug.h"
 
 #ifdef PICOLIBC_TLS
@@ -217,6 +221,11 @@ thread_t *__attribute__((used)) sched_run(void)
             (uintptr_t)next_thread->stack_start + 31,       /* Base Address (rounded up) */
             MPU_ATTR(1, AP_RO_RO, 0, 1, 0, 1, MPU_SIZE_32B) /* Attributes and Size */
             );
+#endif
+        DEBUG("current SP: %08X\n", (uintptr_t)next_thread->sp);
+#ifdef MODULE_PMP_STACK_GUARD
+        write_pmpaddr(2, (uintptr_t)next_thread->stack_start);
+        set_pmpcfg(2, PMP_NA4 | PMP_R);
 #endif
         DEBUG("sched_run: done, changed sched_active_thread.\n");
     }

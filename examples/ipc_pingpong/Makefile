@@ -4,6 +4,8 @@ APPLICATION = ipc_pingpong
 # If no BOARD is found in the environment, use this default:
 BOARD ?= native
 
+USEMODULE += pmp_stack_guard
+
 # This has to be the absolute path to the RIOT base directory:
 RIOTBASE ?= $(CURDIR)/../..
 

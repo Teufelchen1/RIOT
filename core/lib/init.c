@@ -35,7 +35,7 @@
 #include "vfs.h"
 #endif
 
-#define ENABLE_DEBUG 0
+#define ENABLE_DEBUG 1
 #include "debug.h"
 
 #ifndef CONFIG_BOOT_MSG_STRING
@@ -91,7 +91,7 @@ static void *idle_thread(void *arg)
 void kernel_init(void)
 {
     irq_disable();
-
+    DEBUG("main stack: %08X - %08X\n", (uintptr_t) main_stack, (uintptr_t) &main_stack[THREAD_STACKSIZE_MAIN - 1]);
     if (IS_USED(MODULE_CORE_IDLE_THREAD)) {
         thread_create(idle_stack, sizeof(idle_stack),
                       THREAD_PRIORITY_IDLE,
