@@ -32,7 +32,7 @@ PHDRS
 
 SECTIONS
 {
-  __stack_size     = DEFINED(__stack_size) ? __stack_size : 256;
+  __stack_size     = DEFINED(__stack_size) ? __stack_size : 512;
 
   /* Populate information about rom size */
   _srom = ORIGIN(flash);

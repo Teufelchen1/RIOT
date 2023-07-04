@@ -39,7 +39,7 @@ static struct {
     char stack[THREAD_STACKSIZE_MAIN];
 } buf;
 
-char bugger[0x200];
+char bugger[128];
 
 static inline unsigned int __get_PSP(void) {
     unsigned int __tmp;
@@ -92,8 +92,12 @@ static void *thread(void *arg)
 int main(void)
 {
     puts("\nPMP Stack Guard Test\n");
-    bugger[10] = 5;
-    printf("bugger: %08X - %08X\n", (uintptr_t) bugger, (uintptr_t) &bugger[0x200-1]);
+    for (size_t i = 0; i < 128; i++)
+    {
+        bugger[i] = 0xAA;
+    }
+    
+    printf("bugger: %08X - %08X\n", (uintptr_t) bugger, (uintptr_t) &bugger[128-1]);
     puts("If the test fails, the canary value will change unexpectedly");
     puts("after ~150 iterations. If the test succeeds, the MEM MANAGE HANDLER");
     puts("will trigger a RIOT kernel panic before the canary value changes.\n");
