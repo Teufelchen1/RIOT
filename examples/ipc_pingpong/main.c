@@ -21,24 +21,28 @@
 
 #include <stdio.h>
 
+#include "periph/gpio.h"
 #include "thread.h"
 #include "msg.h"
-#include "pmp.h"
+
+void waste_time(void) {
+    puts("Wasting time...");
+    for (size_t i = 0; i < 255; i++)
+    {
+        putc(' ', stdout);
+    }   
+}
 
 void *second_thread(void *arg)
 {
     (void) arg;
 
     printf("2nd thread started, pid: %" PRIkernel_pid "\n", thread_getpid());
-    msg_t m;
 
     while (1) {
-        msg_receive(&m);
-        printf("2nd: ");
-        print_pmpcfg(2);
-        //printf("2nd: Got msg from %" PRIkernel_pid "\n", m.sender_pid);
-        m.content.value++;
-        msg_reply(&m, &m);
+        gpio_set(GPIO_PIN(0, 22));
+        //waste_time();
+        thread_yield();
     }
 
     return NULL;
@@ -49,20 +53,17 @@ char second_thread_stack[THREAD_STACKSIZE_MAIN];
 int main(void)
 {
     printf("Starting IPC Ping-pong example...\n");
+    gpio_init(GPIO_PIN(0, 22), GPIO_OUT);
     printf("1st thread started, pid: %" PRIkernel_pid "\n", thread_getpid());
     printf("Stack of 2nd thread: %08X - %08X\n", (uintptr_t) second_thread_stack, (uintptr_t) (&second_thread_stack[THREAD_STACKSIZE_MAIN-1]));
-    msg_t m;
 
-    kernel_pid_t pid = thread_create(second_thread_stack, sizeof(second_thread_stack),
-                            THREAD_PRIORITY_MAIN - 1, THREAD_CREATE_STACKTEST,
-                            second_thread, NULL, "pong");
-
-    m.content.value = 1;
+    thread_create(second_thread_stack, sizeof(second_thread_stack), 
+                  THREAD_PRIORITY_MAIN, THREAD_CREATE_STACKTEST,
+                  second_thread, NULL, "pong");
 
     while (1) {
-        msg_send_receive(&m, &m, pid);
-        printf("1st: ");
-        print_pmpcfg(2);
-        //printf("1st: Got msg with content %u\n", (unsigned int)m.content.value);
+        gpio_clear(GPIO_PIN(0, 22));
+        //waste_time();
+        thread_yield();
     }
 }
