@@ -150,6 +150,11 @@ static void _unschedule(thread_t *active_thread)
 
 thread_t *__attribute__((used)) sched_run(void)
 {
+#ifdef MODULE_PMP_STACK_GUARD
+    static thread_t * cached_a = NULL;
+    static thread_t * cached_b = NULL;
+    static unsigned next_cache_is_a = 1;
+#endif
     thread_t *active_thread = thread_get_active();
     thread_t *previous_thread = active_thread;
 
@@ -224,8 +229,25 @@ thread_t *__attribute__((used)) sched_run(void)
 #endif
         DEBUG("current SP: %08X\n", (uintptr_t)next_thread->sp);
 #ifdef MODULE_PMP_STACK_GUARD
-        write_pmpaddr(2, (uintptr_t)next_thread->stack_start);
-        set_pmpcfg(2, PMP_NA4 | PMP_R);
+        if (next_thread != cached_a && next_thread != cached_b) {
+            if (next_cache_is_a) {
+                next_cache_is_a = 0;
+                cached_a = next_thread;
+                write_pmpaddr(2, (uintptr_t)next_thread->stack_start);
+                set_pmpcfg(2, PMP_NA4 | PMP_R);
+            } else {
+                next_cache_is_a = 0;
+                cached_b = next_thread;
+                write_pmpaddr(3, (uintptr_t)next_thread->stack_start);
+                set_pmpcfg(3, PMP_NA4 | PMP_R);
+            }
+        } else {
+            if (next_thread == cached_a) {
+                next_cache_is_a = 0;
+            } else {
+                next_cache_is_a = 1;
+            }
+        }
 #endif
         DEBUG("sched_run: done, changed sched_active_thread.\n");
     }
