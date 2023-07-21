@@ -83,7 +83,8 @@ static void *thread(void *arg)
     {
         print_pmpcfg(i);
     }
-    thread_drop_privilege();
+    // thread_drop_privilege();
+    thread_lower_machine_prv();
     recurse(0);
 
     return NULL;

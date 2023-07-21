@@ -20,6 +20,7 @@
 #ifndef THREAD_ARCH_H
 #define THREAD_ARCH_H
 
+#include "vendor/riscv_csr.h"
 #include "irq.h"
 
 #ifdef __cplusplus
@@ -53,6 +54,12 @@ static inline __attribute__((always_inline)) void thread_yield_higher(void)
     else {
         _ecall_dispatch(0, NULL);
     }
+}
+
+static inline void thread_lower_machine_prv(void)
+{
+    clear_csr(mstatus, MSTATUS_MPP);
+    set_csr(mstatus, MSTATUS_MPRV);
 }
 
 static inline __attribute__((always_inline)) void thread_drop_privilege(void)
