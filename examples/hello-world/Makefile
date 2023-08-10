@@ -1,6 +1,10 @@
 # name of your application
 APPLICATION = hello-world
 
+USEMODULE += gnrc_sock_udp
+USEMODULE += gnrc_ipv6
+USEMODULE += gcoap_forward_proxy
+
 # If no BOARD is found in the environment, use this default:
 BOARD ?= native
 
