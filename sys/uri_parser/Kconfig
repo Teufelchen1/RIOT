@@ -7,5 +7,4 @@
 
 config MODULE_URI_PARSER
     bool "URI parser"
-    select MODULE_FMT
     depends on TEST_KCONFIG

@@ -1,9 +1,12 @@
 # name of your application
 APPLICATION = hello-world
 
+USEMODULE += stdin
 USEMODULE += gnrc_sock_udp
 USEMODULE += gnrc_ipv6
 USEMODULE += gcoap_forward_proxy
+
+CFLAGS += -DTHREAD_STACKSIZE_MAIN=2048
 
 # If no BOARD is found in the environment, use this default:
 BOARD ?= native
