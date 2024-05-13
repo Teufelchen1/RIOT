@@ -78,7 +78,7 @@ extern uint32_t _ebackup_bss[];
 /**
  * @brief   Allocation of the interrupt stack
  */
-__attribute__((used,section(".isr_stack"))) uint8_t isr_stack[ISR_STACKSIZE];
+__attribute__((used,section(".isr_stack"))) uint8_t isr_stack[ISR_STACKSIZE*3];
 
 /**
  * @brief   Pre-start routine for CPU-specific settings
