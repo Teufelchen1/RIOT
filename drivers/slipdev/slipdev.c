@@ -32,7 +32,10 @@
 #include "isrpipe.h"
 #include "mutex.h"
 #include "stdio_uart.h"
+#include "net/nanocoap.h"
 
+static uint8_t buffer[512];
+static uint8_t index = 0;
 static int _check_state(slipdev_t *dev);
 
 static inline void slipdev_lock(void)
@@ -81,12 +84,64 @@ static void _slip_rx_cb(void *arg, uint8_t byte)
         isrpipe_write_one(&stdin_isrpipe, byte);
         return;
 #endif
+     case SLIPDEV_STATE_CONFIG:
+        switch (byte) {
+        case SLIPDEV_ESC:
+            dev->state = SLIPDEV_STATE_CONFIG_ESC;
+            break;
+        case SLIPDEV_END:
+            dev->state = SLIPDEV_STATE_NONE;
+            printf("Got coap\n");
+            coap_pkt_t pkt;
+            sock_udp_ep_t remote;
+            coap_request_ctx_t ctx = {
+                .remote = &remote,
+            };
+            if (coap_parse(&pkt, (uint8_t *)buffer, index) < 0) {
+                printf("nanocoap: error parsing packet\n");
+                index = 0;
+                break;
+            }
+            index = 0;
+            unsigned int res = 0;
+            if ((res = coap_handle_req(&pkt, (uint8_t *) buffer, 255, &ctx)) <= 0) {
+                printf("nanocoap: error handling request %" PRIdSIZE "\n", res);
+                break;
+            }
+            slipdev_lock();
+            slipdev_write_byte(dev->config.uart, SLIPDEV_CONFIG_START);
+            slipdev_write_bytes(dev->config.uart, buffer, res);
+            slipdev_write_byte(dev->config.uart, SLIPDEV_END);
+            slipdev_unlock();
+            break;
+        default:
+            buffer[index++] = byte;
+            break;
+        }
+        return;
+    case SLIPDEV_STATE_CONFIG_ESC:
+        switch (byte) {
+        case SLIPDEV_END_ESC:
+            byte = SLIPDEV_END;
+            break;
+        case SLIPDEV_ESC_ESC:
+            byte = SLIPDEV_ESC;
+            break;
+        }
+        dev->state = SLIPDEV_STATE_CONFIG;
+        buffer[index++] = byte;
+        return;
     case SLIPDEV_STATE_NONE:
         /* is diagnostic frame? */
         if (IS_USED(MODULE_SLIPDEV_STDIO) &&
             (byte == SLIPDEV_STDIO_START) &&
             (dev->config.uart == STDIO_UART_DEV)) {
             dev->state = SLIPDEV_STATE_STDIN;
+            return;
+        }
+
+        if (byte == SLIPDEV_CONFIG_START) {
+            dev->state = SLIPDEV_STATE_CONFIG;
             return;
         }
 

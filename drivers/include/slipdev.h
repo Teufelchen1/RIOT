@@ -93,6 +93,12 @@ enum {
      * @brief   Device writes received data to stdin, next byte is escaped
      */
     SLIPDEV_STATE_STDIN_ESC,
+
+    SLIPDEV_STATE_CONFIG,
+    /**
+     * @brief   Device writes received data to stdin, next byte is escaped
+     */
+    SLIPDEV_STATE_CONFIG_ESC,
     /**
      * @brief   Device is in standby, will wake up when sending data
      */

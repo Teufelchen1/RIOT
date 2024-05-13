@@ -27,6 +27,12 @@ DEVELHELP ?= 1
 # Change this to 0 show compiler invocation lines by default:
 QUIET ?= 1
 
+USEMODULE += slipdev_stdio
+USEMODULE += sock_udp
+USEMODULE += gnrc_ipv6
+USEMODULE += nanocoap_sock
+USEMODULE += nanocoap_resources
+
 # Modules to include:
 USEMODULE += shell
 USEMODULE += shell_cmds_default

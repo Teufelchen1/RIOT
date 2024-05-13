@@ -46,6 +46,8 @@ extern "C" {
  *          [SLIPMUX](https://tools.ietf.org/html/draft-bormann-t2trg-slipmux-02#section-4)
  */
 #define SLIPDEV_STDIO_START (0x0aU)
+
+#define SLIPDEV_CONFIG_START (0xA9U)
 /** @} */
 
 /**
