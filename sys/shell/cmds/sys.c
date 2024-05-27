@@ -64,7 +64,6 @@ static int _version_handler(int argc, char **argv)
     (void) argv;
 
     puts(RIOT_VERSION);
-
 #ifdef MODULE_RIOTBOOT_SLOT
     int slot = riotboot_slot_current();
     if (slot >= 0) {

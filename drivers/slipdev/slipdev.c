@@ -91,7 +91,7 @@ static void _slip_rx_cb(void *arg, uint8_t byte)
             break;
         case SLIPDEV_END:
             dev->state = SLIPDEV_STATE_NONE;
-            printf("Got coap\n");
+            //printf("Got coap\n");
             coap_pkt_t pkt;
             sock_udp_ep_t remote;
             coap_request_ctx_t ctx = {
@@ -102,20 +102,22 @@ static void _slip_rx_cb(void *arg, uint8_t byte)
                 index = 0;
                 break;
             }
-            index = 0;
             unsigned int res = 0;
-            if ((res = coap_handle_req(&pkt, (uint8_t *) buffer, 255, &ctx)) <= 0) {
+            if ((res = coap_handle_req(&pkt, (uint8_t *) buffer, 512, &ctx)) <= 0) {
                 printf("nanocoap: error handling request %" PRIdSIZE "\n", res);
                 break;
             }
             slipdev_lock();
+            slipdev_write_byte(dev->config.uart, SLIPDEV_END);
             slipdev_write_byte(dev->config.uart, SLIPDEV_CONFIG_START);
             slipdev_write_bytes(dev->config.uart, buffer, res);
             slipdev_write_byte(dev->config.uart, SLIPDEV_END);
             slipdev_unlock();
+            index = 0;
             break;
         default:
-            buffer[index++] = byte;
+            buffer[index] = byte;
+            index++;
             break;
         }
         return;
@@ -129,7 +131,8 @@ static void _slip_rx_cb(void *arg, uint8_t byte)
             break;
         }
         dev->state = SLIPDEV_STATE_CONFIG;
-        buffer[index++] = byte;
+        buffer[index] = byte;
+        index++;
         return;
     case SLIPDEV_STATE_NONE:
         /* is diagnostic frame? */

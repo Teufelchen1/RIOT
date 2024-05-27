@@ -52,6 +52,7 @@ XFA_INIT_CONST(coap_resource_t, coap_resources_xfa);
  */
 #if CONFIG_NANOCOAP_SERVER_WELL_KNOWN_CORE
 NANOCOAP_RESOURCE(well_known_core) COAP_WELL_KNOWN_CORE_DEFAULT_HANDLER;
+NANOCOAP_RESOURCE(well_known_ifconfig) COAP_WELL_KNOWN_IFCONFIG_DEFAULT_HANDLER;
 #endif
 
 /* re-define coap_resources for compatibility with non-XFA version */
@@ -534,6 +535,7 @@ ssize_t coap_tree_handler(coap_pkt_t *pkt, uint8_t *resp_buf, unsigned resp_buf_
         }
 
         int res = coap_match_path(resource, uri);
+        DEBUG("test: %s vs %s, res %d\n", resource->path, uri, res);
         if (res != 0) {
             continue;
         }
@@ -678,6 +680,7 @@ ssize_t coap_build_reply(coap_pkt_t *pkt, unsigned code,
     coap_hdr_set_type((coap_hdr_t *)rbuf, type);
     coap_hdr_set_code((coap_hdr_t *)rbuf, code);
 
+    DEBUG("LEN: %d", len);
     len += payload_len;
 
     return len;
@@ -1308,11 +1311,12 @@ void coap_block2_init(coap_pkt_t *pkt, coap_block_slicer_t *slicer)
     if (coap_get_blockopt(pkt, COAP_OPT_BLOCK2, &blknum, &szx) >= 0) {
         /* Use the client requested block size if it is smaller than our own
          * maximum block size */
-        if (CONFIG_NANOCOAP_BLOCK_SIZE_EXP_MAX - 4 < szx) {
-            szx = CONFIG_NANOCOAP_BLOCK_SIZE_EXP_MAX - 4;
-        }
+        // if (CONFIG_NANOCOAP_BLOCK_SIZE_EXP_MAX - 4 < szx) {
+        //     DEBUG("mx szx: %d %d\n", CONFIG_NANOCOAP_BLOCK_SIZE_EXP_MAX - 4, szx);
+        //     szx = CONFIG_NANOCOAP_BLOCK_SIZE_EXP_MAX - 4;
+        // }
     }
-
+    DEBUG("szx: %d\n", szx);
     coap_block_slicer_init(slicer, blknum, coap_szx2size(szx));
 }
 
@@ -1340,6 +1344,7 @@ ssize_t coap_block2_build_reply(coap_pkt_t *pkt, unsigned code,
 {
     /* Check if the generated data filled the requested block */
     if (slicer->cur < slicer->start) {
+        DEBUG("BAD OPTION\n");
         return coap_build_reply(pkt, COAP_CODE_BAD_OPTION, rbuf, rlen, 0);
     }
     coap_block2_finish(slicer);
@@ -1399,19 +1404,75 @@ ssize_t coap_well_known_core_default_handler(coap_pkt_t *pkt, uint8_t *buf, \
     bufpos += coap_opt_put_block2(bufpos, COAP_OPT_CONTENT_FORMAT, &slicer, 1);
 
     *bufpos++ = COAP_PAYLOAD_MARKER;
+    uint32_t end = (slicer.end);
+    DEBUG("Slicer end: %ld\n", end);
+    DEBUG("payload LEN1: %d;\n", bufpos - payload);
 
     for (unsigned i = 0; i < coap_resources_numof; i++) {
         if (i) {
             bufpos += coap_blockwise_put_char(&slicer, bufpos, ',');
         }
         bufpos += coap_blockwise_put_char(&slicer, bufpos, '<');
+        //DEBUG("payload LEN__: %d;\n", bufpos - payload);
         unsigned url_len = strlen(coap_resources[i].path);
+        //DEBUG("URL LEN: %d\n", url_len);
         bufpos += coap_blockwise_put_bytes(&slicer, bufpos,
                 (uint8_t*)coap_resources[i].path, url_len);
+        //DEBUG("payload LEN__: %d;\n", bufpos - payload);
         bufpos += coap_blockwise_put_char(&slicer, bufpos, '>');
     }
 
     unsigned payload_len = bufpos - payload;
+    DEBUG("payload LEN2: %d;\n", payload_len);
+    return coap_block2_build_reply(pkt, COAP_CODE_205, buf, len, payload_len,
+                                   &slicer);
+}
+ssize_t coap_well_known_ifconfig_default_handler(coap_pkt_t *pkt, uint8_t *buf, \
+                                             size_t len, coap_request_ctx_t *context)
+{
+    (void)context;
+    coap_block_slicer_t slicer;
+    coap_block2_init(pkt, &slicer);
+    uint8_t *payload = buf + coap_get_total_hdr_len(pkt);
+    uint8_t *bufpos = payload;
+    bufpos += coap_put_option_ct(bufpos, 0, COAP_FORMAT_TEXT);
+    bufpos += coap_opt_put_block2(bufpos, COAP_OPT_CONTENT_FORMAT, &slicer, 1);
+
+    *bufpos++ = COAP_PAYLOAD_MARKER;
+    uint32_t end = (slicer.end);
+    DEBUG("Slicer end: %ld\n", end);
+    DEBUG("payload LEN1: %d;\n", bufpos - payload);
+
+    // for (unsigned i = 0; i < coap_resources_numof; i++) {
+    //     if (i) {
+    //         bufpos += coap_blockwise_put_char(&slicer, bufpos, ',');
+    //     }
+    //     bufpos += coap_blockwise_put_char(&slicer, bufpos, '<');
+    //     //DEBUG("payload LEN__: %d;\n", bufpos - payload);
+    //     unsigned url_len = strlen(coap_resources[i].path);
+    //     //DEBUG("URL LEN: %d\n", url_len);
+    //     bufpos += coap_blockwise_put_bytes(&slicer, bufpos,
+    //             (uint8_t*)coap_resources[i].path, url_len);
+    //     //DEBUG("payload LEN__: %d;\n", bufpos - payload);
+    //     bufpos += coap_blockwise_put_char(&slicer, bufpos, '>');
+    // }
+    char * addr_str = "Iface 7\nHWaddr: 66:C3:0C:0E:B4:B1:E3:82\nLink type: wireless\ninet6 addr: fe80::64c3:c0e:b4b1:e382\n";
+    bufpos += coap_blockwise_put_bytes(&slicer, bufpos, (uint8_t*)addr_str, strlen(addr_str));
+
+        // uint8_t ipv6_addrs_flags[2];
+
+        // memset(ipv6_addrs_flags, 0, sizeof(ipv6_addrs_flags));
+        // /* assume it to succeed (otherwise array will stay 0) */
+        // netif_get_opt(iface, NETOPT_IPV6_ADDR_FLAGS, 0, ipv6_addrs_flags,
+        //               sizeof(ipv6_addrs_flags));
+        // /* yes, the res of NETOPT_IPV6_ADDR is meant to be here ;-) */
+        // for (unsigned i = 0; i < (res / sizeof(ipv6_addr_t)); i++) {
+        //     _netif_list_ipv6(&ipv6_addrs[i], ipv6_addrs_flags[i]);
+        // }
+
+
+    unsigned payload_len = bufpos - payload;
+    DEBUG("payload LEN2: %d;\n", payload_len);
     return coap_block2_build_reply(pkt, COAP_CODE_205, buf, len, payload_len,
                                    &slicer);
 }

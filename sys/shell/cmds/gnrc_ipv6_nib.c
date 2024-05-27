@@ -38,7 +38,6 @@ int _gnrc_ipv6_nib(int argc, char **argv)
 
     if ((argc < 2) || (strcmp(argv[1], "help") == 0)) {
         _usage(argv);
-        res = 0;
     }
     else if (strcmp(argv[1], "neigh") == 0) {
         res = _nib_neigh(argc, argv);

@@ -2192,6 +2192,10 @@ ssize_t coap_reply_simple(coap_pkt_t *pkt,
 extern ssize_t coap_well_known_core_default_handler(coap_pkt_t *pkt, \
                                                     uint8_t *buf, size_t len,
                                                     coap_request_ctx_t *context);
+
+extern ssize_t coap_well_known_ifconfig_default_handler(coap_pkt_t *pkt, \
+                                                    uint8_t *buf, size_t len,
+                                                    coap_request_ctx_t *context);
 /**@}*/
 
 /**
@@ -2268,6 +2272,13 @@ static inline uint32_t coap_get_observe(coap_pkt_t *pkt)
         .path = "/.well-known/core", \
         .methods = COAP_GET, \
         .handler = coap_well_known_core_default_handler \
+    }
+
+#define COAP_WELL_KNOWN_IFCONFIG_DEFAULT_HANDLER \
+    { \
+        .path = "/.well-known/ifconfig", \
+        .methods = COAP_GET, \
+        .handler = coap_well_known_ifconfig_default_handler \
     }
 
 #ifdef __cplusplus

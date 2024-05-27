@@ -102,6 +102,7 @@ static shell_command_handler_t search_commands_xfa(char *command)
     for (unsigned i = 0; i < n; i++) {
         const volatile shell_command_xfa_t *entry = shell_commands_xfa[i];
         if (flash_strcmp(command, entry->name) == 0) {
+                //void *handler_ = (void *) entry->handler;
             return entry->handler;
         }
     }
