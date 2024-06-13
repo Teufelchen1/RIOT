@@ -134,6 +134,100 @@ uint32_t pwm_init(pwm_t pwm, pwm_mode_t mode, uint32_t freq, uint16_t res)
 
     return real_clk;
 }
+extern uint8_t audio_raw[];
+
+
+uint32_t pwm_init_auto(pwm_t pwm, pwm_mode_t mode, uint32_t freq, uint16_t res)
+{
+    /* check if given device is valid */
+    if ((pwm >= PWM_NUMOF) || (res > MAX_RES)) {
+        return 0;
+    }
+
+    /* check if pwm mode is supported */
+    if ((mode != PWM_RIGHT) && (mode != PWM_LEFT)) {
+        return 0;
+    }
+
+    /* make sure the device is stopped */
+    dev(pwm)->TASKS_STOP = 1;
+    dev(pwm)->ENABLE = 0;
+
+    /* calculate the needed frequency, for center modes we need double */
+    uint32_t real_clk;
+    uint32_t clk = (freq * res);
+    /* match to best fitting prescaler */
+    for (uint8_t i = 0; i < (MAX_PRESCALER + 1); i++) {
+        real_clk = (PERIPH_CLOCK >> i);
+        if (((real_clk - (real_clk / F_DEV)) < clk) &&
+            ((real_clk + (real_clk / F_DEV)) > clk)) {
+            dev(pwm)->PRESCALER = i;
+            break;
+        }
+        if (i == MAX_PRESCALER) {
+            return 0;
+        }
+    }
+    real_clk /= res;
+
+    /* pin configuration */
+    for (unsigned i = 0; i < PWM_CHANNELS; i++) {
+        /* either left aligned pol or inverted duty cycle */
+        pwm_seq[pwm][i] = (POL_MASK & mode) ? POL_MASK : res;
+        /* Sign-extend the undefined pin into a value that also sets the
+         * 'Disconnected' field, and is also that register's reset state */
+        uint32_t extended_pin = (int32_t)(int8_t)pwm_config[pwm].pin[i];
+        dev(pwm)->PSEL.OUT[i] = extended_pin;
+        DEBUG("set PIN[%i] to %i with 0x%x\n",
+              (int)i, (int)pwm_config[pwm].pin[i], pwm_seq[pwm][i]);
+    }
+
+    /* enable the device */
+    dev(pwm)->ENABLE = 1;
+
+    /* finally get the actual selected frequency */
+    DEBUG("set real f to %i\n", (int)real_clk);
+    dev(pwm)->COUNTERTOP = (res - 1);
+
+    /* select PWM mode */
+    dev(pwm)->MODE = PWM_MODE_UPDOWN_Up;
+    dev(pwm)->LOOP = 1 << PWM_LOOP_CNT_Pos;
+    dev(pwm)->DECODER = PWM_DECODER_LOAD_Common;
+
+    dev(pwm)->EVENTS_LOOPSDONE = 1;
+    dev(pwm)->SHORTS = 1<<PWM_SHORTS_LOOPSDONE_SEQSTART0_Pos;
+
+    DEBUG("MODE: 0x%08x\n", (int)dev(pwm)->MODE);
+    DEBUG("LOOP: 0x%08x\n", (int)dev(pwm)->LOOP);
+    DEBUG("DECODER: 0x%08x\n", (int)dev(pwm)->DECODER);
+
+    pwm_seq[1][0] = 255;
+    pwm_seq[1][1] = 255;
+    pwm_seq[1][2] = 255;
+    pwm_seq[1][3] = 128;
+
+    /* setup the sequence */
+    dev(pwm)->SEQ[0].PTR = (uint32_t) audio_raw;
+    dev(pwm)->SEQ[0].CNT = 0x3FFF;//music_len;
+    dev(pwm)->SEQ[0].REFRESH = 1;
+    dev(pwm)->SEQ[0].ENDDELAY = 0;
+    dev(pwm)->SEQ[1].PTR = (uint32_t) &audio_raw[0x4000*2];
+    dev(pwm)->SEQ[1].CNT = 0x3FFF;//music_len;
+    dev(pwm)->SEQ[1].REFRESH = 1;
+    dev(pwm)->SEQ[1].ENDDELAY = 0;
+
+    DEBUG("ptr: 0x%08x\n", (int)dev(pwm)->SEQ[0].PTR);
+    DEBUG("cnt: 0x%08x\n", (int)dev(pwm)->SEQ[0].CNT);
+    DEBUG("refresh: 0x%08x\n", (int)dev(pwm)->SEQ[0].REFRESH);
+    DEBUG("enddelay: 0x%08x\n", (int)dev(pwm)->SEQ[0].ENDDELAY);
+
+    /* start sequence */
+    dev(pwm)->TASKS_SEQSTART[0] = 1;
+
+    DEBUG("PWM started\n");
+
+    return real_clk;
+}
 
 uint8_t pwm_channels(pwm_t pwm)
 {

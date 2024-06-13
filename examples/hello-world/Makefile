@@ -4,6 +4,9 @@ APPLICATION = hello-world
 # If no BOARD is found in the environment, use this default:
 BOARD ?= native
 
+USEMODULE += xtimer
+FEATURES_REQUIRED += periph_pwm
+
 # This has to be the absolute path to the RIOT base directory:
 RIOTBASE ?= $(CURDIR)/../..
 
