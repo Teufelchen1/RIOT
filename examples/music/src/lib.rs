@@ -101,10 +101,10 @@ fn main() {
         128, 167, 202, 230, 248, 255, 248, 230, 202, 167, 128, 89, 54, 26, 8, 1, 8, 26, 54, 89,
         128, 167, 202, 230, 248, 255, 248, 230, 202, 167, 128, 89, 54, 26, 8, 1, 8, 26, 54, 89,
     ];
-    // let mut p_in = GPIO::from_port_and_pin(0, 11)
-    //     .expect("In pin does not exist")
-    //     .configure_as_input(InputMode::InPullUp)
-    //     .expect("In pin could not be configured");
+    let mut p_in = GPIO::from_port_and_pin(0, 11)
+        .expect("In pin does not exist")
+        .configure_as_input(InputMode::InPullUp)
+        .expect("In pin could not be configured");
 
     let handler = new_dispatcher().at(&["ps"], POEM).with_wkc();
     let mut handler = riot_wrappers::coap_handler::v0_2::GcoapHandler(handler);
@@ -142,8 +142,8 @@ fn main() {
         // Sending main thread to sleep; can't return or the Gcoap handler would need to be
         // deregistered (which it can't).
         loop {
-            // let value = p_in.is_high();
-            //println!("Read GPIO value {}, writing it to the out port", value);
+            let value = p_in.is_high();
+            println!("Read GPIO value {}, writing it to the out port", value);
             let clock = Clock::msec();
             println!("Rotation value {}", rotation);
             clock.sleep_ticks(10);
@@ -152,14 +152,28 @@ fn main() {
             index += 1;
             index %= 78000;
             let fac = 2.0 * 3.141 * (80.0 + rotation as f32);
-            unsafe {
-                for i in 0..32768 {
-                    let value = fac * i as f32 / 8000.0;
-                    let value = (value % (2.0 * 3.141)) * 255.0 / (2.0 * 3.141);
-                    //let value = libm::sin(value as f64);
-                    //let value = value * 127.0 + 128.0;
-                    let value = value as u16;
-                    audio_raw[i] = value;
+            if value {
+                unsafe {
+                    for i in 0..16384 {
+                        let value = fac * i as f32 / 8000.0;
+                        let value = (value % (2.0 * 3.141)) * 255.0 / (2.0 * 3.141);
+                        //let value = libm::sin(value as f64);
+                        //let value = value * 127.0 + 128.0;
+                        let value = value as u16;
+                        audio_raw[i] = value;
+                    }
+                    //audio_raw[index as usize] = 0x00;
+                }
+            } else {
+                unsafe {
+                    for i in 16384..32768 {
+                        let value = fac * i as f32 / 8000.0;
+                        let value = (value % (2.0 * 3.141)) * 255.0 / (2.0 * 3.141);
+                        //let value = libm::sin(value as f64);
+                        //let value = value * 127.0 + 128.0;
+                        let value = value as u16;
+                        audio_raw[i] = value;
+                    }
                 }
                 //audio_raw[index as usize] = 0x00;
             }
