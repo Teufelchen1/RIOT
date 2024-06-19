@@ -15,3 +15,6 @@ def offset(freq, wait):
 
 offset(365, 0.00004)
 #print(out)
+
+out = [int(math.sin(2*math.pi*x*400/8000)*127)+128 for x in range(0, 1000)]
+print(out)

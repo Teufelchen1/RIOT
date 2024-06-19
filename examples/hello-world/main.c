@@ -94,10 +94,10 @@ int main(void)
     printf("This board features a(n) %s CPU.\n", RIOT_CPU);
 
 
-    // uint32_t freq = pwm_init_auto(PWM_DEV(1), PWM_LEFT, 31372, 255);
+    uint32_t freq = pwm_init_auto(PWM_DEV(1), PWM_LEFT, 31372, 255);
     //     printf("Set frequency %" PRIu32 ",\n", freq);
 
-     uint32_t freq = pwm_init(PWM_DEV(1), PWM_LEFT, 31372, 255);
+     //uint32_t freq = pwm_init(PWM_DEV(1), PWM_LEFT, 31372, 255);
         printf("Set frequency %" PRIu32 ",\n", freq);
 
     //pwm_set(PWM_DEV(1), 0, 128);
@@ -106,7 +106,7 @@ int main(void)
         //play285();
         //play500();
         //playOnOff();
-        playfile();
+        //playfile();
          //puts("1");
         //wave(49, 5);
         //xtimer_usleep(1000000);

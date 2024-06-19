@@ -136,9 +136,13 @@ uint32_t pwm_init(pwm_t pwm, pwm_mode_t mode, uint32_t freq, uint16_t res)
 }
 extern uint8_t audio_raw[];
 
+uint32_t pwm_init_auto_rust(uint32_t freq, uint16_t res) {
+    return pwm_init_auto(PWM_DEV(1), PWM_LEFT, freq, res, NULL);
+}
 
-uint32_t pwm_init_auto(pwm_t pwm, pwm_mode_t mode, uint32_t freq, uint16_t res)
+uint32_t pwm_init_auto(pwm_t pwm, pwm_mode_t mode, uint32_t freq, uint16_t res, uint8_t * buf)
 {
+    (void) buf;
     /* check if given device is valid */
     if ((pwm >= PWM_NUMOF) || (res > MAX_RES)) {
         return 0;

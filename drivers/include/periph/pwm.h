@@ -139,7 +139,8 @@ typedef struct {
 uint32_t pwm_init(pwm_t dev, pwm_mode_t mode, uint32_t freq, uint16_t res);
 
 
-uint32_t pwm_init_auto(pwm_t dev, pwm_mode_t mode, uint32_t freq, uint16_t res);
+uint32_t pwm_init_auto(pwm_t dev, pwm_mode_t mode, uint32_t freq, uint16_t res, uint8_t * buf);
+uint32_t pwm_init_auto_rust(uint32_t freq, uint16_t res);
 
 
 /**
