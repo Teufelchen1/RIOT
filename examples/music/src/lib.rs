@@ -17,9 +17,12 @@ use riot_wrappers::ztimer::Clock;
 use riot_wrappers::{gcoap, gnrc, thread, ztimer};
 use riot_wrappers::{println, riot_main};
 
+use core::ptr::addr_of_mut;
 extern crate rust_riotmodules;
 
 riot_main!(main);
+
+static mut global_rotation: u32 = 0;
 
 const POEM_TEXT: &str = "Aurea\n";
 
@@ -29,10 +32,58 @@ pub const POEM_TEXT_LEN: usize = POEM_TEXT.len();
 pub struct Poem;
 impl coap_handler_implementations::SimpleRenderable for Poem {
     fn render<W: core::fmt::Write>(&mut self, writer: &mut W) {
+        unsafe {
+            global_rotation += 15;
+        }
         writer.write_str(POEM_TEXT).unwrap()
     }
 }
 pub static POEM: SimpleRendered<Poem> = SimpleRendered(Poem);
+
+fn addBass(start: usize, stop: usize, audio_raw: &mut [u16]) {
+    let times = 8192.0 / 60.0;
+    let stop_damping = (start as f32 + (stop as f32 - start as f32) * 0.6) as usize;
+    for i in start..stop_damping {
+        let value = (i as f32 % times) / times;
+        let value = value * 128.0;
+        let value = value as u16;
+        unsafe {
+            audio_raw[i] = value;
+        }
+    }
+    for i in stop_damping..stop {
+        let value = (i as f32 % times) / times;
+        let damping = (stop as f32 - i as f32) / (stop - stop_damping) as f32;
+        let value = value * 128.0 * damping;
+        let value = value as u16;
+        unsafe {
+            audio_raw[i] = value;
+        }
+    }
+}
+
+fn addTone(start: usize, stop: usize, freq: f32, audio_raw: &mut [u16]) {
+    println!("Adding {freq}");
+    let times = 8192.0 / freq;
+    let stop_damping = (start as f32 + (stop as f32 - start as f32) * 0.6) as usize;
+    for i in start..stop_damping {
+        let value = (i as f32 % times) / times;
+        let value = value * 64.0;
+        let value = value as u16;
+        unsafe {
+            audio_raw[i] += value;
+        }
+    }
+    for i in stop_damping..stop {
+        let value = (i as f32 % times) / times;
+        let damping = (stop as f32 - i as f32) / (stop - stop_damping) as f32;
+        let value = value * 64.0 * damping;
+        let value = value as u16;
+        unsafe {
+            audio_raw[i] += value;
+        }
+    }
+}
 
 fn main() {
     //let mut audio: [u8; 0x8000] = [0; 0x8000];
@@ -46,7 +97,6 @@ fn main() {
         let freq = pwm_init_auto_rust(31372, 255);
         println!("Set frequency {:}", freq);
     }
-    let mut index = 0;
     let mut rotation: u32 = 0;
 
     let values500: &[u8] = &[
@@ -141,42 +191,81 @@ fn main() {
 
         // Sending main thread to sleep; can't return or the Gcoap handler would need to be
         // deregistered (which it can't).
+        let clock = Clock::msec();
+        let mut bar = 0;
+        let mut last_value = false;
+        let mut last_global_rotation = 0;
         loop {
-            let value = p_in.is_high();
-            println!("Read GPIO value {}, writing it to the out port", value);
-            let clock = Clock::msec();
-            println!("Rotation value {}", rotation);
             clock.sleep_ticks(10);
-            rotation += 15;
-            rotation %= 360;
-            index += 1;
-            index %= 78000;
-            let fac = 2.0 * 3.141 * (80.0 + rotation as f32);
-            if value {
+            let value = p_in.is_low();
+            let coap_change = unsafe { global_rotation != last_global_rotation };
+            if value != last_value || coap_change {
+                last_value = value;
                 unsafe {
-                    for i in 0..16384 {
-                        let value = fac * i as f32 / 8000.0;
-                        let value = (value % (2.0 * 3.141)) * 255.0 / (2.0 * 3.141);
-                        //let value = libm::sin(value as f64);
-                        //let value = value * 127.0 + 128.0;
-                        let value = value as u16;
-                        audio_raw[i] = value;
-                    }
-                    //audio_raw[index as usize] = 0x00;
+                    last_global_rotation = global_rotation;
                 }
-            } else {
-                unsafe {
-                    for i in 16384..32768 {
-                        let value = fac * i as f32 / 8000.0;
-                        let value = (value % (2.0 * 3.141)) * 255.0 / (2.0 * 3.141);
-                        //let value = libm::sin(value as f64);
-                        //let value = value * 127.0 + 128.0;
-                        let value = value as u16;
-                        audio_raw[i] = value;
+                rotation += 10;
+                rotation %= 360;
+                let speed = {
+                    println!("Rotation value {}, global {last_global_rotation}", rotation);
+                    ((1.0 + (last_global_rotation as f32 / 360.0)) * 5.0) as u32
+                };
+                let samplerate = 8192;
+                let step = samplerate * 4 / speed;
+                println!("Speed: {speed}, Step {step}");
+
+                for slot in 0..speed {
+                    let start = slot * step;
+                    let stop = (slot + 1) * step;
+                    //println!("{start}, {stop}");
+                    unsafe {
+                        addBass(start as usize, stop as usize, &mut audio_raw);
                     }
+                    if bar == 0 || bar == 2 {
+                        unsafe {
+                            addTone(start as usize, stop as usize, 800.0, &mut audio_raw);
+                        }
+                    }
+                    if bar == 1 || bar == 3 || bar == 5 || bar == 7 {
+                        unsafe {
+                            addTone(
+                                start as usize,
+                                stop as usize,
+                                160.0 + 70.0 * bar as f32,
+                                &mut audio_raw,
+                            );
+                        }
+                    }
+                    bar += 1;
+                    bar %= 8;
                 }
-                //audio_raw[index as usize] = 0x00;
             }
+
+            // if value {
+            //     unsafe {
+            //         for i in 0..16384 {
+            //             let value = fac * i as f32 / 8000.0;
+            //             let value = (value % (2.0 * 3.141)) * 255.0 / (2.0 * 3.141);
+            //             //let value = libm::sin(value as f64);
+            //             //let value = value * 127.0 + 128.0;
+            //             let value = value as u16;
+            //             audio_raw[i] = value;
+            //         }
+            //         //audio_raw[index as usize] = 0x00;
+            //     }
+            // } else {
+            //     unsafe {
+            //         for i in 16384..32768 {
+            //             let value = fac * i as f32 / 8000.0;
+            //             let value = (value % (2.0 * 3.141)) * 255.0 / (2.0 * 3.141);
+            //             //let value = libm::sin(value as f64);
+            //             //let value = value * 127.0 + 128.0;
+            //             let value = value as u16;
+            //             audio_raw[i] = value;
+            //         }
+            //     }
+            //     //audio_raw[index as usize] = 0x00;
+            // }
         }
     })
 }
