@@ -723,6 +723,9 @@ version = "0.1.0"
 dependencies = [
  "coap-handler 0.2.0",
  "coap-handler-implementations",
+ "coap-message 0.3.1",
+ "coap-message-utils",
+ "coap-numbers",
  "libm",
  "riot-sys",
  "riot-wrappers",
