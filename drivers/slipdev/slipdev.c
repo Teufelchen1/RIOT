@@ -26,7 +26,7 @@
 
 /* XXX: BE CAREFUL ABOUT USING OUTPUT WITH MODULE_SLIPDEV_STDIO IN SENDING
  * FUNCTIONALITY! MIGHT CAUSE DEADLOCK!!!1!! */
-#define ENABLE_DEBUG 0
+#define ENABLE_DEBUG 1
 #include "debug.h"
 
 #include "isrpipe.h"
@@ -34,8 +34,8 @@
 #include "stdio_uart.h"
 #include "net/nanocoap.h"
 
-static uint8_t buffer[512];
-static uint8_t index = 0;
+// static uint8_t buffer[512];
+// static uint8_t index = 0;
 static int _check_state(slipdev_t *dev);
 
 static inline void slipdev_lock(void)
@@ -84,40 +84,30 @@ static void _slip_rx_cb(void *arg, uint8_t byte)
         isrpipe_write_one(&stdin_isrpipe, byte);
         return;
 #endif
-     case SLIPDEV_STATE_CONFIG:
+    case SLIPDEV_STATE_CONFIG:
         switch (byte) {
         case SLIPDEV_ESC:
             dev->state = SLIPDEV_STATE_CONFIG_ESC;
             break;
         case SLIPDEV_END:
+            crb_end_chunk(&dev->rb_config, true);
             dev->state = SLIPDEV_STATE_NONE;
-            //printf("Got coap\n");
-            coap_pkt_t pkt;
-            sock_udp_ep_t remote;
-            coap_request_ctx_t ctx = {
-                .remote = &remote,
-            };
-            if (coap_parse(&pkt, (uint8_t *)buffer, index) < 0) {
-                printf("nanocoap: error parsing packet\n");
-                index = 0;
-                break;
-            }
-            unsigned int res = 0;
-            if ((res = coap_handle_req(&pkt, (uint8_t *) buffer, 512, &ctx)) <= 0) {
-                printf("nanocoap: error handling request %" PRIdSIZE "\n", res);
-                break;
-            }
-            slipdev_lock();
-            slipdev_write_byte(dev->config.uart, SLIPDEV_END);
-            slipdev_write_byte(dev->config.uart, SLIPDEV_CONFIG_START);
-            slipdev_write_bytes(dev->config.uart, buffer, res);
-            slipdev_write_byte(dev->config.uart, SLIPDEV_END);
-            slipdev_unlock();
-            index = 0;
+            DEBUG("Finished chunk, setting flags\n");
+            thread_flags_set(thread_get(dev->coap_server_pid), 1);
+            //thread_flags_wake(thread_get(dev->coap_server_pid));
+            
+            // index = 0;
             break;
         default:
-            buffer[index] = byte;
-            index++;
+            /* discard frame if byte can't be added */
+            if (!crb_add_byte(&dev->rb_config, byte)) {
+                DEBUG("slipdev: rx buffer full, drop frame\n");
+                crb_end_chunk(&dev->rb_config, false);
+                dev->state = SLIPDEV_STATE_NONE;
+                return;
+            }
+            // buffer[index] = byte;
+            // index++;
             break;
         }
         return;
@@ -130,9 +120,16 @@ static void _slip_rx_cb(void *arg, uint8_t byte)
             byte = SLIPDEV_ESC;
             break;
         }
+        /* discard frame if byte can't be added */
+        if (!crb_add_byte(&dev->rb_config, byte)) {
+            DEBUG("slipdev: rx buffer full, drop frame\n");
+            crb_end_chunk(&dev->rb_config, false);
+            dev->state = SLIPDEV_STATE_NONE;
+            return;
+        }
         dev->state = SLIPDEV_STATE_CONFIG;
-        buffer[index] = byte;
-        index++;
+        // buffer[index] = byte;
+        // index++;
         return;
     case SLIPDEV_STATE_NONE:
         /* is diagnostic frame? */
@@ -144,6 +141,10 @@ static void _slip_rx_cb(void *arg, uint8_t byte)
         }
 
         if (byte == SLIPDEV_CONFIG_START) {
+            /* try to create new frame */
+            if (!crb_start_chunk(&dev->rb_config)) {
+                return;
+            }
             dev->state = SLIPDEV_STATE_CONFIG;
             return;
         }
@@ -404,8 +405,57 @@ static const netdev_driver_t slip_driver = {
 #endif
 };
 
+static void *_coap_server_thread(void *arg)
+{
+    static uint8_t buf[512];
+    slipdev_t *dev = arg;
+    DEBUG("Started coap_server thread\n");
+    while (1) {
+        DEBUG("Waiting for flags\n");
+        thread_flags_wait_any(1);
+        DEBUG("Got flag!\n");
+        size_t len;
+        while (crb_get_chunk_size(&dev->rb_config, &len)) {
+            crb_consume_chunk(&dev->rb_config, buf, len);
+            printf("Got coap\n");
+            coap_pkt_t pkt;
+            sock_udp_ep_t remote;
+            coap_request_ctx_t ctx = {
+                .remote = &remote,
+            };
+            if (coap_parse(&pkt, (uint8_t *)buf, len) < 0) {
+                printf("nanocoap: error parsing packet\n");
+                // index = 0;
+                break;
+            }
+            unsigned int res = 0;
+            if ((res = coap_handle_req(&pkt, (uint8_t *) buf, 512, &ctx)) <= 0) {
+                printf("nanocoap: error handling request %" PRIdSIZE "\n", res);
+                break;
+            }
+            printf("Sending packet..\n");
+            slipdev_lock();
+            //slipdev_write_byte(dev->config.uart, SLIPDEV_END);
+            slipdev_write_byte(dev->config.uart, SLIPDEV_CONFIG_START);
+            slipdev_write_bytes(dev->config.uart, buf, res);
+            slipdev_write_byte(dev->config.uart, SLIPDEV_END);
+            slipdev_unlock();
+        }
+    }
+
+    return NULL;
+}
+
 void slipdev_setup(slipdev_t *dev, const slipdev_params_t *params, uint8_t index)
 {
+    static char stack[1024];
+    crb_init(&dev->rb_config, dev->rxmem_config, sizeof(dev->rxmem_config));
+
+    dev->coap_server_pid = thread_create(stack, sizeof(stack), THREAD_PRIORITY_MAIN - 1,
+                                     THREAD_CREATE_STACKTEST, _coap_server_thread,
+                                     (void *)dev, "Slipmux CoAP server");
+
+
     /* set device descriptor fields */
     dev->config = *params;
     dev->state = 0;

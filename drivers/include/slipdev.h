@@ -133,6 +133,9 @@ typedef struct {
                                             /* loop at _isr.                                */
 
     uint8_t rxmem[CONFIG_SLIPDEV_BUFSIZE];  /**< memory used by RX buffer */
+    chunk_ringbuf_t rb_config;
+    uint8_t rxmem_config[CONFIG_SLIPDEV_BUFSIZE];  /**< memory used by RX buffer */
+    kernel_pid_t coap_server_pid;
     /**
      * @brief   Device state
      * @see     [Device state definitions](@ref drivers_slipdev_states)
