@@ -27,6 +27,7 @@ USEMODULE += gcoap
 USEMODULE += od
 USEMODULE += fmt
 USEMODULE += netutils
+USEMODULE += saul_default
 USEMODULE += random
 # Add also the shell, some shell commands
 #USEMODULE += shell

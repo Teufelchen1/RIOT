@@ -33,6 +33,10 @@
 extern "C" {
 #endif
 
+#define NEIGHBOUR_LIMIT         (10)
+extern ipv6_addr_t neighbours[NEIGHBOUR_LIMIT];
+
+
 extern uint16_t req_count;  /**< Counts requests sent by CLI. */
 
 /**
@@ -41,7 +45,8 @@ extern uint16_t req_count;  /**< Counts requests sent by CLI. */
  * @param   argv    Shell argument values (including shell command name)
  * @return  Exit status of the shell command
  */
-int gcoap_cli_cmd(int argc, char **argv);
+//int gcoap_cli_cmd(int argc, char **argv);
+int gcoap_cli_cmd(int method, char *addr, char *uri, char *payload, gcoap_resp_handler_t resp_handler);
 
 /**
  * @brief   Registers the CoAP resources exposed in the example app
@@ -56,6 +61,8 @@ void server_init(void);
  * Call this whenever the count of successfully send client requests changes
  */
 void notify_observers(void);
+
+int ping_local_multicast(void);
 
 #ifdef __cplusplus
 }

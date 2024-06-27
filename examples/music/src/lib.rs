@@ -38,21 +38,25 @@ riot_main!(main);
 static mut global_rotation: u32 = 0;
 static mut global_pitch: u32 = 800;
 
-// const ROTATION_TEXT: &str = "Ok\n";
+static mut STATE_TEXT: &str = "Free!";
 
-// pub const ROTATION_TEXT_LEN: usize = ROTATION_TEXT.len();
+//pub const STATE_TEXT_LEN: usize = STATE_TEXT.len();
 
-// #[derive(Copy, Clone)]
-// pub struct Rotation;
-// impl coap_handler_implementations::SimpleRenderable for Rotation {
-//     fn render<W: core::fmt::Write>(&mut self, writer: &mut W) {
-//         unsafe {
-//             global_rotation += 15;
-//         }
-//         writer.write_str(ROTATION_TEXT).unwrap()
-//     }
-// }
-// pub static ROTATION: SimpleRendered<Rotation> = SimpleRendered(Rotation);
+#[derive(Copy, Clone)]
+pub struct State;
+impl coap_handler_implementations::SimpleRenderable for State {
+    fn render<W: core::fmt::Write>(&mut self, writer: &mut W) {
+        unsafe {
+            writer.write_str(STATE_TEXT).unwrap();
+            STATE_TEXT = "Taken";
+        }
+    }
+
+    fn content_format(&self) -> Option<u16> {
+        Some(0 /* text/plain */)
+    }
+}
+pub static STATE: SimpleRendered<State> = SimpleRendered(State);
 
 pub struct Rotation;
 impl coap_handler::Handler for Rotation {
@@ -64,6 +68,7 @@ impl coap_handler::Handler for Rotation {
         &mut self,
         request: &M,
     ) -> Result<Self::RequestData, Error> {
+        println!("{:?}", request.payload());
         let expected_accept = coap_numbers::content_format::from_str("text/plain; charset=utf-8");
 
         let mut block2 = None;
@@ -149,7 +154,7 @@ impl coap_handler::Handler for Pitch {
         request: &M,
     ) -> Result<Self::RequestData, Error> {
         let expected_accept = coap_numbers::content_format::from_str("text/plain; charset=utf-8");
-
+        println!("{:?}", request.payload());
         let mut block2 = None;
 
         for o in request.options() {
@@ -174,7 +179,6 @@ impl coap_handler::Handler for Pitch {
                 _ => (),
             }
         }
-
         let stringify = core::str::from_utf8(request.payload()).unwrap_or("0");
         let number: u32 = stringify.parse().unwrap_or(800);
         let reqdata = match request.code().into() {
@@ -344,6 +348,7 @@ fn main() {
     let handler = new_dispatcher()
         .at(&["speed"], Rotation)
         .at(&["pitch"], Pitch)
+        .at(&["musichost"], STATE)
         .with_wkc();
     let mut handler = riot_wrappers::coap_handler::v0_2::GcoapHandler(handler);
 
@@ -384,13 +389,18 @@ fn main() {
         let mut last_value = false;
         let mut last_global_rotation = 0;
         let mut last_global_pitch = 0;
+        let mut inactivity_counter = 0;
         loop {
+            inactivity_counter += 1;
+            //println!("{:?}", inactivity_counter);
             clock.sleep_ticks(10);
             let value = p_in.is_low();
             let coap_change = unsafe {
                 (global_rotation != last_global_rotation) || (global_pitch != last_global_pitch)
             };
             if value != last_value || coap_change {
+                inactivity_counter = 0;
+
                 last_value = value;
                 unsafe {
                     last_global_rotation = global_rotation;
@@ -434,6 +444,13 @@ fn main() {
                     }
                     bar += 1;
                     bar %= 8;
+                }
+            } else {
+                if inactivity_counter > 5000 {
+                    unsafe {
+                        STATE_TEXT = "Free!";
+                    }
+                    inactivity_counter = 0;
                 }
             }
 
