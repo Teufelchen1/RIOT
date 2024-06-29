@@ -37,7 +37,10 @@ static mutex_t lock = MUTEX_INIT_LOCKED;
 static bool music_host = false;
 static char music_host_str[IPV6_ADDR_MAX_STR_LEN+2];
 
-static char * clif_interface = "Free!";
+static char * clif_interface_blue = "Blue!";
+static char * clif_interface_red = "Red_!";
+static char * clif_interface_green = "Gree!";
+static char * clif_interface_taken = "Taken";
 static size_t clif_interface_len = 5;
 
 //#define MAIN_QUEUE_SIZE (4)
@@ -149,6 +152,19 @@ static void probe_all(void)
     probe(8, dev);
     dev = saul_reg_find_nth(11);
     probe(11, dev);
+
+    // dev = saul_reg_find_nth(6);
+    // probe(6, dev);
+    // dev = saul_reg_find_nth(5);
+    // probe(5, dev);
+    //  dev = saul_reg_find_nth(4);
+    // probe(4, dev);
+    // dev = saul_reg_find_nth(3);
+    // probe(3, dev);
+    //  dev = saul_reg_find_nth(2); // blue
+    // probe(2, dev);
+    // dev = saul_reg_find_nth(1); // green
+    // probe(1, dev);
 }
 
 static void _resp_handler(const gcoap_request_memo_t *memo, coap_pkt_t* pdu,
@@ -190,10 +206,28 @@ static void _resp_handler(const gcoap_request_memo_t *memo, coap_pkt_t* pdu,
             // od_hex_dump(clif_interface,clif_interface_len, OD_WIDTH_DEFAULT);
             //printf("%.*s\n", pdu->payload_len, (char *)pdu->payload);
             if (pdu->payload_len == clif_interface_len) {
-                if (memcmp(clif_interface, pdu->payload, pdu->payload_len) == 0) {
+                if (memcmp(clif_interface_blue, pdu->payload, pdu->payload_len) == 0) {
                     music_host = true;
-                    puts("Found music host");
-                } else {
+                    phydat_t data;
+                    data.val[0] = 255;
+                    saul_reg_write(saul_reg_find_nth(2), &data);
+                    puts("Found music host blue");
+                } else if (memcmp(clif_interface_red, pdu->payload, pdu->payload_len) == 0) {
+                    music_host = true;
+                    phydat_t data;
+                    data.val[0] = 255;
+                    saul_reg_write(saul_reg_find_nth(0), &data);
+                    puts("Found music host red");
+                } else if (memcmp(clif_interface_green, pdu->payload, pdu->payload_len) == 0) {
+                    music_host = true;
+                    phydat_t data;
+                    data.val[0] = 255;
+                    saul_reg_write(saul_reg_find_nth(1), &data);
+                    puts("Found music host gree");
+                } else if (memcmp(clif_interface_taken, pdu->payload, pdu->payload_len) == 0) {
+                    puts("Music host taken");
+                }
+                else {
                     printf("%.*s (%d bytes)\n", pdu->payload_len, (char *)pdu->payload, pdu->payload_len);
                 }
             }
@@ -247,12 +281,18 @@ static void _resp_handler(const gcoap_request_memo_t *memo, coap_pkt_t* pdu,
 
 int main(void)
 {
+    //probe_all();
     /* we need a message queue for the thread running the shell in order to
      * receive potentially fast incoming networking packets */
     msg_init_queue(_main_msg_queue, MAIN_QUEUE_SIZE);
     /* for the thread running the shell */
     //msg_init_queue(_main_msg_queue, MAIN_QUEUE_SIZE);
     while(1) {
+        phydat_t data;
+        data.val[0] = 0;
+        saul_reg_write(saul_reg_find_nth(0), &data);
+        saul_reg_write(saul_reg_find_nth(1), &data);
+        saul_reg_write(saul_reg_find_nth(2), &data);
         music_host = false;
         for (int i = 0; i < NEIGHBOUR_LIMIT; ++i)
         {
@@ -312,11 +352,12 @@ int main(void)
                 fmt_u32_dec(buffer, (int)((degrees/180.0)*360.0));
                 //printf("Buffer: %s\n", command[4]);
                 int resp = gcoap_cli_cmd(COAP_METHOD_POST, music_host_str, "/speed", buffer, NULL);
+                mutex_lock(&resp_lock);
                 for (int i = 0; i < 10; ++i)
                 {
                     buffer[i]=0;
                 }
-                if (resp == -1) {
+                if (resp == -1 || RESPONSE != COAP_CLASS_SUCCESS) {
                     // breaks the local endless loop
                     break;
                 }
@@ -326,11 +367,12 @@ int main(void)
                 fmt_u32_dec(buffer, (int)((old_degrees/180.0)*360.0));
                 //printf("Buffer: %s\n", command[4]);
                 int resp = gcoap_cli_cmd(COAP_METHOD_POST, music_host_str, "/speed", buffer, NULL);
+                mutex_lock(&resp_lock);
                 for (int i = 0; i < 10; ++i)
                 {
                     buffer[i]=0;
                 }
-                if (resp == -1) {
+                if (resp == -1 || RESPONSE != COAP_CLASS_SUCCESS) {
                     // breaks the local endless loop
                     break;
                 }

@@ -39,6 +39,9 @@ extern ipv6_addr_t neighbours[NEIGHBOUR_LIMIT];
 
 extern uint16_t req_count;  /**< Counts requests sent by CLI. */
 
+extern mutex_t resp_lock;
+extern int RESPONSE;
+
 /**
  * @brief   Shell interface exposing the client side features of gcoap
  * @param   argc    Number of shell arguments (including shell command name)

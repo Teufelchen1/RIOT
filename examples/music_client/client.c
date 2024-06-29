@@ -42,6 +42,8 @@
 #include "net/dsm.h"
 #endif
 
+mutex_t resp_lock = MUTEX_INIT_LOCKED;
+int RESPONSE = 0;
 
 /* Retain request path to re-request if response includes block. User must not
  * start a new request (with a new path) until any blockwise transfer
@@ -67,6 +69,8 @@ static void _resp_handler(const gcoap_request_memo_t *memo, coap_pkt_t* pdu,
     (void)remote;       /* not interested in the source currently */
 
     if (memo->state == GCOAP_MEMO_TIMEOUT) {
+        RESPONSE = COAP_CODE_PRECONDITION_FAILED;
+        mutex_unlock(&resp_lock);
         printf("gcoap: timeout for msg ID %02u\n", coap_get_id(pdu));
         return;
     }
@@ -87,6 +91,7 @@ static void _resp_handler(const gcoap_request_memo_t *memo, coap_pkt_t* pdu,
         puts("--- blockwise start ---");
     }
 
+    RESPONSE = coap_get_code_class(pdu);
     char *class_str = (coap_get_code_class(pdu) == COAP_CLASS_SUCCESS)
                             ? "Success" : "Error";
     printf("gcoap: response %s, code %1u.%02u", class_str,
@@ -138,6 +143,7 @@ static void _resp_handler(const gcoap_request_memo_t *memo, coap_pkt_t* pdu,
             puts("--- blockwise complete ---");
         }
     }
+    mutex_unlock(&resp_lock);
 }
 
 static size_t _send(uint8_t *buf, size_t len, sock_udp_ep_t *remote, gcoap_resp_handler_t resp_handler)

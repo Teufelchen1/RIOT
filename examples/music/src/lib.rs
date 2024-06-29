@@ -38,7 +38,10 @@ riot_main!(main);
 static mut global_rotation: u32 = 0;
 static mut global_pitch: u32 = 800;
 
-static mut STATE_TEXT: &str = "Free!";
+static mut inactivity_counter: u32 = 0;
+
+static mut COLOT_TEXT: &str = "Red_!";
+static mut STATE_TEXT: &str = "Red_!";
 
 //pub const STATE_TEXT_LEN: usize = STATE_TEXT.len();
 
@@ -68,6 +71,11 @@ impl coap_handler::Handler for Rotation {
         &mut self,
         request: &M,
     ) -> Result<Self::RequestData, Error> {
+        unsafe {
+            if STATE_TEXT != "Taken" {
+                return Err(Error::method_not_allowed());
+            }
+        }
         println!("{:?}", request.payload());
         let expected_accept = coap_numbers::content_format::from_str("text/plain; charset=utf-8");
 
@@ -121,6 +129,7 @@ impl coap_handler::Handler for Rotation {
         println!("Request: {:?}", request);
         unsafe {
             global_rotation = request % 360;
+            inactivity_counter = 0;
         }
         Ok(())
     }
@@ -153,6 +162,11 @@ impl coap_handler::Handler for Pitch {
         &mut self,
         request: &M,
     ) -> Result<Self::RequestData, Error> {
+        unsafe {
+            if STATE_TEXT != "Taken" {
+                return Err(Error::method_not_allowed());
+            }
+        }
         let expected_accept = coap_numbers::content_format::from_str("text/plain; charset=utf-8");
         println!("{:?}", request.payload());
         let mut block2 = None;
@@ -208,6 +222,7 @@ impl coap_handler::Handler for Pitch {
             } else {
                 global_pitch = 200;
             }
+            inactivity_counter = 0;
         }
         Ok(())
     }
@@ -276,6 +291,7 @@ fn addTone(start: usize, stop: usize, freq: f32, audio_raw: &mut [u16]) {
 }
 
 fn main() {
+    let mut base_freq: f32 = 0.0;
     //let mut audio: [u8; 0x8000] = [0; 0x8000];
     extern "C" {
         static mut audio_raw: [u16; 78430];
@@ -345,6 +361,26 @@ fn main() {
         .configure_as_input(InputMode::InPullUp)
         .expect("In pin could not be configured");
 
+    let mut p_in_color = GPIO::from_port_and_pin(1, 14)
+        .expect("In pin does not exist")
+        .configure_as_input(InputMode::InPullDown)
+        .expect("In pin could not be configured");
+    if p_in_color.is_low() {
+        println!("Color pin is low");
+        base_freq = 160.0;
+        unsafe {
+            COLOT_TEXT = "Blue!";
+            STATE_TEXT = "Blue!";
+        }
+    } else {
+        println!("Color pin is high");
+        base_freq = 480.0;
+        unsafe {
+            COLOT_TEXT = "Gree!";
+            STATE_TEXT = "Gree!";
+        }
+    }
+
     let handler = new_dispatcher()
         .at(&["speed"], Rotation)
         .at(&["pitch"], Pitch)
@@ -389,9 +425,11 @@ fn main() {
         let mut last_value = false;
         let mut last_global_rotation = 0;
         let mut last_global_pitch = 0;
-        let mut inactivity_counter = 0;
+
         loop {
-            inactivity_counter += 1;
+            unsafe {
+                inactivity_counter += 1;
+            }
             //println!("{:?}", inactivity_counter);
             clock.sleep_ticks(10);
             let value = p_in.is_low();
@@ -399,7 +437,9 @@ fn main() {
                 (global_rotation != last_global_rotation) || (global_pitch != last_global_pitch)
             };
             if value != last_value || coap_change {
-                inactivity_counter = 0;
+                unsafe {
+                    inactivity_counter = 0;
+                }
 
                 last_value = value;
                 unsafe {
@@ -422,35 +462,48 @@ fn main() {
                     unsafe {
                         addBass(start as usize, stop as usize, &mut audio_raw);
                     }
-                    if bar == 0 || bar == 2 {
-                        unsafe {
-                            addTone(
-                                start as usize,
-                                stop as usize,
-                                global_pitch as f32,
-                                &mut audio_raw,
-                            );
-                        }
-                    }
-                    if bar == 1 || bar == 3 || bar == 5 || bar == 7 {
-                        unsafe {
-                            addTone(
-                                start as usize,
-                                stop as usize,
-                                160.0 + 70.0 * bar as f32,
-                                &mut audio_raw,
-                            );
+                    // if bar == 0 || bar == 2 {
+                    //     unsafe {
+                    //         addTone(
+                    //             start as usize,
+                    //             stop as usize,
+                    //             global_pitch as f32,
+                    //             &mut audio_raw,
+                    //         );
+                    //     }
+                    // }
+                    // if bar == 1 || bar == 3 || bar == 5 || bar == 7 {
+                    //     unsafe {
+                    //         addTone(
+                    //             start as usize,
+                    //             stop as usize,
+                    //             base_freq + 70.0 * bar as f32,
+                    //             &mut audio_raw,
+                    //         );
+                    //     }
+                    // }
+                    unsafe {
+                        if STATE_TEXT == "Taken" {
+                            addTone(start as usize, stop as usize, base_freq, &mut audio_raw);
                         }
                     }
                     bar += 1;
                     bar %= 8;
                 }
             } else {
-                if inactivity_counter > 5000 {
-                    unsafe {
-                        STATE_TEXT = "Free!";
+                unsafe {
+                    if inactivity_counter % 1000 == 0 {
+                        println!("Inactivity counter: {inactivity_counter}");
                     }
-                    inactivity_counter = 0;
+                    if inactivity_counter > 3500 {
+                        global_pitch = 0;
+                        global_rotation = 0;
+                        last_global_rotation = 1;
+                        STATE_TEXT = COLOT_TEXT;
+                        println!("Inactivity timeout: Switching to free");
+                        STATE_TEXT = COLOT_TEXT;
+                        inactivity_counter = 0;
+                    }
                 }
             }
 
