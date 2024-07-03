@@ -21,6 +21,8 @@
 #include <stdio.h>
 #include <assert.h>
 
+#include "net/nanocoap.h"
+
 #include "architecture.h"
 #include "thread.h"
 #include "sched.h"
@@ -39,6 +41,205 @@
  * @brief Prints a list of running threads including stack usage to stdout.
  */
 void ps(void)
+{
+#ifdef DEVELHELP
+    int overall_stacksz = 0, overall_used = 0;
+#endif
+
+    printf("\tpid | "
+#ifdef CONFIG_THREAD_NAMES
+            "%-21s| "
+#endif
+            "%-9sQ | pri "
+#ifdef DEVELHELP
+           "| stack  ( used) ( free) | base addr  | current     "
+#endif
+#ifdef MODULE_SCHEDSTATISTICS
+           "| runtime  | switches  | runtime_usec "
+#endif
+           "\n",
+#ifdef CONFIG_THREAD_NAMES
+           "name",
+#endif
+           "state");
+
+#if defined(DEVELHELP) && ISR_STACKSIZE
+    int isr_usage = thread_isr_stack_usage();
+    void *isr_start = thread_isr_stack_start();
+    void *isr_sp = thread_isr_stack_pointer();
+    printf("\t  - | isr_stack            | -        - |"
+           "   - | %6i (%5i) (%5i) | %10p | %10p\n",
+           ISR_STACKSIZE, isr_usage, ISR_STACKSIZE - isr_usage,
+           isr_start, isr_sp);
+    overall_stacksz += ISR_STACKSIZE;
+    if (isr_usage > 0) {
+        overall_used += isr_usage;
+    }
+#endif
+
+#ifdef MODULE_SCHEDSTATISTICS
+    uint64_t rt_sum = 0;
+    if (!IS_ACTIVE(MODULE_CORE_IDLE_THREAD)) {
+        rt_sum = sched_pidlist[KERNEL_PID_UNDEF].runtime_us;
+    }
+    for (kernel_pid_t i = KERNEL_PID_FIRST; i <= KERNEL_PID_LAST; i++) {
+        thread_t *p = thread_get(i);
+        if (p != NULL) {
+            rt_sum += sched_pidlist[i].runtime_us;
+        }
+    }
+#endif /* MODULE_SCHEDSTATISTICS */
+
+    for (kernel_pid_t i = KERNEL_PID_FIRST; i <= KERNEL_PID_LAST; i++) {
+        thread_t *p = thread_get(i);
+
+        if (p != NULL) {
+            thread_status_t state = thread_get_status(p);                   /* copy state */
+            const char *sname = thread_state_to_string(state);              /* get state name */
+            const char *queued = thread_is_active(p) ? "Q" : "_";           /* get queued flag */
+#ifdef DEVELHELP
+            int stacksz = thread_get_stacksize(p);                          /* get stack size */
+            overall_stacksz += stacksz;
+            int stack_free = thread_measure_stack_free(thread_get_stackstart(p));
+            stacksz -= stack_free;
+            overall_used += stacksz;
+#endif
+#ifdef MODULE_SCHEDSTATISTICS
+            /* multiply with 100 for percentage and to avoid floats/doubles */
+            uint64_t runtime_us = sched_pidlist[i].runtime_us * 100;
+            uint32_t ztimer_us = {sched_pidlist[i].runtime_us};
+            unsigned runtime_major = runtime_us / rt_sum;
+            unsigned runtime_minor = ((runtime_us % rt_sum) * 1000) / rt_sum;
+            unsigned switches = sched_pidlist[i].schedules;
+#endif
+            printf("\t%3" PRIkernel_pid
+#ifdef CONFIG_THREAD_NAMES
+                   " | %-20s"
+#endif
+                   " | %-8s %.1s | %3i"
+#ifdef DEVELHELP
+                   " | %6" PRIuSIZE " (%5i) (%5i) | %10p | %10p "
+#endif
+#ifdef MODULE_SCHEDSTATISTICS
+                   " | %2d.%03d%% |  %8u  | %10"PRIu32" "
+#endif
+                   "\n",
+                   thread_getpid_of(p),
+#ifdef CONFIG_THREAD_NAMES
+                   thread_get_name(p),
+#endif
+                   sname, queued, thread_get_priority(p)
+#ifdef DEVELHELP
+                   , thread_get_stacksize(p), stacksz, stack_free,
+                   thread_get_stackstart(p), thread_get_sp(p)
+#endif
+#ifdef MODULE_SCHEDSTATISTICS
+                   , runtime_major, runtime_minor, switches, ztimer_us
+#endif
+                  );
+        }
+    }
+
+#ifdef DEVELHELP
+    printf("\t%5s %-21s|%13s%6s %6i (%5i) (%5i)\n", "|", "SUM", "|", "|",
+           overall_stacksz, overall_used, overall_stacksz - overall_used);
+#   ifdef MODULE_TLSF_MALLOC
+    puts("\nHeap usage:");
+    tlsf_size_container_t sizes = { .free = 0, .used = 0 };
+    tlsf_walk_pool(tlsf_get_pool(_tlsf_get_global_control()), tlsf_size_walker, &sizes);
+    printf("\tTotal free size: %u\n", sizes.free);
+    printf("\tTotal used size: %u\n", sizes.used);
+#   endif
+#endif
+}
+
+static ssize_t _cmd_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len, coap_request_ctx_t *context)
+{
+    (void) context;
+
+#if defined(DEVELHELP) && ISR_STACKSIZE
+    int isr_usage = thread_isr_stack_usage();
+    void *isr_start = thread_isr_stack_start();
+    void *isr_sp = thread_isr_stack_pointer();
+
+    uint8_t *payload_start;
+    uint8_t *payload_start_backup;
+    size_t payload_len_max;
+
+    ssize_t header_len = coap_build_reply_header(
+        pkt, COAP_CODE_205, buf, len, COAP_FORMAT_TEXT, (void **) &payload_start, &payload_len_max);
+    
+    if (header_len <= 0) {
+        return header_len;
+    }
+
+    if (128 > payload_len_max) {
+        return -ENOBUFS;
+    }
+    payload_start_backup = payload_start;
+    memcpy(payload_start, "isr_stack", 9);
+    uint32_t stacksz = ISR_STACKSIZE;
+    memcpy(&payload_start[9], &stacksz, 4);
+    memcpy(&payload_start[13], &isr_usage, 4);
+    memcpy(&payload_start[17], &isr_start, 4);
+    memcpy(&payload_start[21], &isr_sp, 4);
+    payload_start = payload_start + 25;
+
+    for (kernel_pid_t i = KERNEL_PID_FIRST; i <= KERNEL_PID_LAST; i++) {
+        thread_t *p = thread_get(i);
+
+        if (p != NULL) {
+            //thread_status_t state = thread_get_status(p);                   /* copy state */
+            //const char *sname = thread_state_to_string(state);              /* get state name */
+            //const char *queued = thread_is_active(p) ? "Q" : "_";           /* get queued flag */
+#ifdef DEVELHELP
+            int stacksz = thread_get_stacksize(p);                          /* get stack size */
+            //overall_stacksz += stacksz;
+            int stack_free = thread_measure_stack_free(thread_get_stackstart(p));
+            stacksz -= stack_free;
+            //overall_used += stacksz;
+#endif
+            const char * name = thread_get_name(p);
+            memcpy(payload_start, name, strlen(name)+1);
+            payload_start += strlen(name)+1;
+            uint32_t stacksz_total = thread_get_stacksize(p);
+            memcpy(payload_start, &stacksz_total, 4);
+            payload_start += 4;
+            memcpy(payload_start, &stacksz, 4);
+            payload_start += 4;
+            void * start = thread_get_stackstart(p);
+            memcpy(payload_start, &start, 4);
+            payload_start += 4;
+            void *sp = thread_get_sp(p);
+            memcpy(payload_start, &sp, 4);
+            payload_start += 4;
+        }
+    }
+
+    //memcpy(payload_start, buffer, 24);
+
+    return header_len + (payload_start - payload_start_backup);
+
+    // printf("\t  - | isr_stack            | -        - |"
+    //        "   - | %6i (%5i) (%5i) | %10p | %10p\n",
+    //        ISR_STACKSIZE, isr_usage, ISR_STACKSIZE - isr_usage,
+    //        isr_start, isr_sp);
+#endif
+
+    // int res = 0;
+    // if (res == 0) {
+    //     return coap_reply_simple(pkt, COAP_CODE_205, buf, len,
+    //         COAP_FORMAT_TEXT, (uint8_t*)buffer, 24);
+    // }
+    // return coap_reply_simple(pkt, COAP_CODE_BAD_REQUEST, buf, len,
+    //         COAP_FORMAT_TEXT, (uint8_t*)"FAILED", strlen("FAILED"));
+}
+
+NANOCOAP_RESOURCE(config_ps) { \
+        .path = "/config/ps", .methods = COAP_GET, .handler = _cmd_handler, .context = NULL \
+    };
+
+void ps_config(void)
 {
 #ifdef DEVELHELP
     int overall_stacksz = 0, overall_used = 0;
