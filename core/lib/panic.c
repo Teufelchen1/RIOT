@@ -67,7 +67,7 @@ NORETURN void core_panic(core_panic_t crash_code, const char *message)
         LOG_ERROR("*** RIOT kernel panic:\n%s\n\n", message);
 #ifdef DEVELHELP
 #ifdef MODULE_PS
-        ps();
+        ps_regular();
         LOG_ERROR("\n");
 #endif
 

@@ -40,37 +40,37 @@
 /**
  * @brief Prints a list of running threads including stack usage to stdout.
  */
-void ps(void)
+void ps_regular(void)
 {
 #ifdef DEVELHELP
     int overall_stacksz = 0, overall_used = 0;
 #endif
 
-    printf("\tpid | "
+    printf(""
 #ifdef CONFIG_THREAD_NAMES
             "%-21s| "
 #endif
-            "%-9sQ | pri "
+           // "%-9sQ | pri "
 #ifdef DEVELHELP
-           "| stack  ( used) ( free) | base addr  | current     "
+           "stack  ( used) ( free) |base addr |current    "
 #endif
 #ifdef MODULE_SCHEDSTATISTICS
            "| runtime  | switches  | runtime_usec "
 #endif
            "\n",
 #ifdef CONFIG_THREAD_NAMES
-           "name",
+           "name"
 #endif
-           "state");
+           );
 
 #if defined(DEVELHELP) && ISR_STACKSIZE
     int isr_usage = thread_isr_stack_usage();
     void *isr_start = thread_isr_stack_start();
     void *isr_sp = thread_isr_stack_pointer();
-    printf("\t  - | isr_stack            | -        - |"
-           "   - | %6i (%5i) (%5i) | %10p | %10p\n",
+    printf("isr_stack           "
+           " | %6i (%5i) (%5i) |%10p|%10p\n",
            ISR_STACKSIZE, isr_usage, ISR_STACKSIZE - isr_usage,
-           isr_start, isr_sp);
+           isr_start, isr_sp - 116);
     overall_stacksz += ISR_STACKSIZE;
     if (isr_usage > 0) {
         overall_used += isr_usage;
@@ -94,9 +94,9 @@ void ps(void)
         thread_t *p = thread_get(i);
 
         if (p != NULL) {
-            thread_status_t state = thread_get_status(p);                   /* copy state */
-            const char *sname = thread_state_to_string(state);              /* get state name */
-            const char *queued = thread_is_active(p) ? "Q" : "_";           /* get queued flag */
+            // thread_status_t state = thread_get_status(p);                   /* copy state */
+            // const char *sname = thread_state_to_string(state);              /* get state name */
+            // const char *queued = thread_is_active(p) ? "Q" : "_";           /* get queued flag */
 #ifdef DEVELHELP
             int stacksz = thread_get_stacksize(p);                          /* get stack size */
             overall_stacksz += stacksz;
@@ -112,25 +112,25 @@ void ps(void)
             unsigned runtime_minor = ((runtime_us % rt_sum) * 1000) / rt_sum;
             unsigned switches = sched_pidlist[i].schedules;
 #endif
-            printf("\t%3" PRIkernel_pid
+            printf(""
 #ifdef CONFIG_THREAD_NAMES
-                   " | %-20s"
+                   "%-20s"
 #endif
-                   " | %-8s %.1s | %3i"
+                  // " | %-8s %.1s | %3i"
 #ifdef DEVELHELP
-                   " | %6" PRIuSIZE " (%5i) (%5i) | %10p | %10p "
+                   " | %6" PRIuSIZE " (%5i) (%5i) |%10p|%10p"
 #endif
 #ifdef MODULE_SCHEDSTATISTICS
                    " | %2d.%03d%% |  %8u  | %10"PRIu32" "
 #endif
                    "\n",
-                   thread_getpid_of(p),
+                   //thread_getpid_of(p),
 #ifdef CONFIG_THREAD_NAMES
                    thread_get_name(p),
 #endif
-                   sname, queued, thread_get_priority(p)
+                  // sname, queued, thread_get_priority(p),
 #ifdef DEVELHELP
-                   , thread_get_stacksize(p), stacksz, stack_free,
+                   thread_get_stacksize(p), stacksz, stack_free,
                    thread_get_stackstart(p), thread_get_sp(p)
 #endif
 #ifdef MODULE_SCHEDSTATISTICS
@@ -141,8 +141,8 @@ void ps(void)
     }
 
 #ifdef DEVELHELP
-    printf("\t%5s %-21s|%13s%6s %6i (%5i) (%5i)\n", "|", "SUM", "|", "|",
-           overall_stacksz, overall_used, overall_stacksz - overall_used);
+   // printf("\t%5s %-21s|%13s%6s %6i (%5i) (%5i)\n", "|", "SUM", "|", "|",
+    //       overall_stacksz, overall_used, overall_stacksz - overall_used);
 #   ifdef MODULE_TLSF_MALLOC
     puts("\nHeap usage:");
     tlsf_size_container_t sizes = { .free = 0, .used = 0 };
@@ -153,14 +153,14 @@ void ps(void)
 #endif
 }
 
-static ssize_t _cmd_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len, coap_request_ctx_t *context)
+static ssize_t _ps_cmd_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len, coap_request_ctx_t *context)
 {
     (void) context;
 
 #if defined(DEVELHELP) && ISR_STACKSIZE
     int isr_usage = thread_isr_stack_usage();
     void *isr_start = thread_isr_stack_start();
-    void *isr_sp = thread_isr_stack_pointer();
+    //void *isr_sp = thread_isr_stack_pointer();
 
     uint8_t *payload_start;
     uint8_t *payload_start_backup;
@@ -177,13 +177,13 @@ static ssize_t _cmd_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len, coap_requ
         return -ENOBUFS;
     }
     payload_start_backup = payload_start;
-    memcpy(payload_start, "isr_stack", 9);
+    memcpy(payload_start, "isr_stack\0", 10);
     uint32_t stacksz = ISR_STACKSIZE;
-    memcpy(&payload_start[9], &stacksz, 4);
-    memcpy(&payload_start[13], &isr_usage, 4);
-    memcpy(&payload_start[17], &isr_start, 4);
-    memcpy(&payload_start[21], &isr_sp, 4);
-    payload_start = payload_start + 25;
+    memcpy(&payload_start[9+1], &stacksz, 4);
+    memcpy(&payload_start[13+1], &isr_usage, 4);
+    memcpy(&payload_start[17+1], &isr_start, 4);
+    //memcpy(&payload_start[21+1], &isr_sp, 4);
+    payload_start = payload_start + 21+1;
 
     for (kernel_pid_t i = KERNEL_PID_FIRST; i <= KERNEL_PID_LAST; i++) {
         thread_t *p = thread_get(i);
@@ -210,9 +210,9 @@ static ssize_t _cmd_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len, coap_requ
             void * start = thread_get_stackstart(p);
             memcpy(payload_start, &start, 4);
             payload_start += 4;
-            void *sp = thread_get_sp(p);
-            memcpy(payload_start, &sp, 4);
-            payload_start += 4;
+            // void *sp = thread_get_sp(p);
+            // memcpy(payload_start, &sp, 4);
+            // payload_start += 4;
         }
     }
 
@@ -236,7 +236,7 @@ static ssize_t _cmd_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len, coap_requ
 }
 
 NANOCOAP_RESOURCE(config_ps) { \
-        .path = "/config/ps", .methods = COAP_GET, .handler = _cmd_handler, .context = NULL \
+        .path = "/config/ps", .methods = COAP_GET, .handler = _ps_cmd_handler, .context = NULL \
     };
 
 void ps_config(void)

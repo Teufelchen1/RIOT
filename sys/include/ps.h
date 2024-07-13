@@ -29,7 +29,7 @@ extern "C" {
 /**
  * @brief Print information to all active threads to stdout.
  */
-void ps(void);
+void ps_regular(void);
 
 #ifdef __cplusplus
 }

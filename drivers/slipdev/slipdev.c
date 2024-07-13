@@ -26,7 +26,7 @@
 
 /* XXX: BE CAREFUL ABOUT USING OUTPUT WITH MODULE_SLIPDEV_STDIO IN SENDING
  * FUNCTIONALITY! MIGHT CAUSE DEADLOCK!!!1!! */
-#define ENABLE_DEBUG 1
+#define ENABLE_DEBUG 0
 #include "debug.h"
 
 #include "isrpipe.h"
@@ -417,7 +417,7 @@ static void *_coap_server_thread(void *arg)
         size_t len;
         while (crb_get_chunk_size(&dev->rb_config, &len)) {
             crb_consume_chunk(&dev->rb_config, buf, len);
-            printf("Got coap\n");
+            //printf("Got coap\n");
             coap_pkt_t pkt;
             sock_udp_ep_t remote;
             coap_request_ctx_t ctx = {
@@ -433,7 +433,7 @@ static void *_coap_server_thread(void *arg)
                 printf("nanocoap: error handling request %" PRIdSIZE "\n", res);
                 break;
             }
-            printf("Sending packet..\n");
+            //printf("Sending packet..\n");
             slipdev_lock();
             //slipdev_write_byte(dev->config.uart, SLIPDEV_END);
             slipdev_write_byte(dev->config.uart, SLIPDEV_CONFIG_START);

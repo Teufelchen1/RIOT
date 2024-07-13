@@ -26,9 +26,9 @@ static int _ps_handler(int argc, char **argv)
     (void) argc;
     (void) argv;
 
-    ps();
+    ps_regular();
 
     return 0;
 }
 
-SHELL_COMMAND(ps, "Prints information about running threads.", _ps_handler);
+SHELL_COMMAND(ps_regular, "Prints information about running threads.", _ps_handler);
