@@ -32,6 +32,7 @@
 #include "net/gnrc.h"
 #endif
 
+extern void server_init(void);
 int main(void)
 {
 #ifdef MODULE_NETIF
@@ -41,7 +42,7 @@ int main(void)
 #endif
 
     (void) puts("Welcome to RIOT!");
-
+    server_init();
     char line_buf[SHELL_DEFAULT_BUFSIZE];
     shell_run(NULL, line_buf, SHELL_DEFAULT_BUFSIZE);
 
