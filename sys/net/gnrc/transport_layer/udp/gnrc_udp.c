@@ -42,7 +42,7 @@ static kernel_pid_t _pid = KERNEL_PID_UNDEF;
 /**
  * @brief   Allocate memory for the UDP thread's stack
  */
-static char _stack[GNRC_UDP_STACK_SIZE + DEBUG_EXTRA_STACKSIZE];
+static char _stack[GNRC_UDP_STACK_SIZE + DEBUG_EXTRA_STACKSIZE + 512];
 static msg_t _msg_queue[GNRC_UDP_MSG_QUEUE_SIZE];
 
 /**
@@ -144,13 +144,14 @@ static void _receive(gnrc_pktsnip_t *pkt)
         return;
     }
     if (_calc_csum(udp, ipv6, pkt) != 0xFFFF) {
-        DEBUG("udp: received packet with invalid checksum, dropping it\n");
+        DEBUG("udp: received packet with invalid checksum (%d), dropping it\n", _calc_csum(udp, ipv6, pkt));
         gnrc_pktbuf_release(pkt);
         return;
     }
 
     /* get port (netreg demux context) */
     port = (uint32_t)byteorder_ntohs(hdr->dst_port);
+    DEBUG("udp: PORT %ld\n", port);
 
     /* send payload to receivers */
     if (!gnrc_netapi_dispatch_receive(GNRC_NETTYPE_UDP, port, pkt)) {
@@ -234,6 +235,7 @@ static void *_event_loop(void *arg)
     /* dispatch NETAPI messages */
     while (1) {
         msg_receive(&msg);
+        //gnrc_pktbuf_stats();
         switch (msg.type) {
             case GNRC_NETAPI_MSG_TYPE_RCV:
                 DEBUG("udp: GNRC_NETAPI_MSG_TYPE_RCV\n");
