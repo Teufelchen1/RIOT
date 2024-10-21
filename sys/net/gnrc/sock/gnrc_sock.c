@@ -35,6 +35,9 @@
 #  include "ztimer.h"
 #endif
 
+#define ENABLE_DEBUG        1
+#include "debug.h"
+
 #ifdef MODULE_FUZZING
 extern gnrc_pktsnip_t *gnrc_pktbuf_fuzzptr;
 gnrc_pktsnip_t *gnrc_sock_prevpkt = NULL;
@@ -49,7 +52,7 @@ static void _netapi_cb(uint16_t cmd, gnrc_pktsnip_t *pkt, void *ctx)
         gnrc_sock_reg_t *reg = ctx;
 
         if (mbox_try_put(&reg->mbox, &msg) < 1) {
-            LOG_WARNING("gnrc_sock: dropped message to %p (was full)\n",
+            DEBUG("gnrc_sock: dropped message to %p (was full)\n",
                         (void *)&reg->mbox);
             /* packet could not be delivered so it should be dropped */
             gnrc_pktbuf_release(pkt);

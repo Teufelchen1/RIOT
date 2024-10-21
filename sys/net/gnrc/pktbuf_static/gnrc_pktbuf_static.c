@@ -35,8 +35,17 @@
 #include "pktbuf_internal.h"
 #include "pktbuf_static.h"
 
-#define ENABLE_DEBUG 0
+#define ENABLE_DEBUG 1
 #include "debug.h"
+
+/**
+ * @brief enable use-after-free/out of bounds write detection
+ */
+#ifndef CONFIG_GNRC_PKTBUF_CHECK_USE_AFTER_FREE
+#define CONFIG_GNRC_PKTBUF_CHECK_USE_AFTER_FREE (1)
+#endif
+
+#define CANARY 0x55
 
 static alignas(sizeof(_unused_t)) uint8_t _static_buf[CONFIG_GNRC_PKTBUF_SIZE];
 static_assert((CONFIG_GNRC_PKTBUF_SIZE % sizeof(_unused_t)) == 0,
@@ -84,7 +93,18 @@ gnrc_pktsnip_t *gnrc_pktbuf_add(gnrc_pktsnip_t *next, const void *data, size_t s
                                 gnrc_nettype_t type)
 {
     gnrc_pktsnip_t *pkt;
-
+    if (type == GNRC_NETTYPE_UDP) {
+        DEBUG("pktbuf: udp size %d\n", size);
+    }
+    else if (type == GNRC_NETTYPE_UNDEF) {
+        DEBUG("pktbuf: undf size %d\n", size);
+    }
+    else if (type == GNRC_NETTYPE_IPV6) {
+        DEBUG("pktbuf: ipv6 size %d\n", size);
+    }
+    else {
+        DEBUG("pktbuf: %d size %d\n", type, size);
+    }
     if (size > CONFIG_GNRC_PKTBUF_SIZE) {
         DEBUG("pktbuf: size (%" PRIuSIZE ") > CONFIG_GNRC_PKTBUF_SIZE (%u)\n",
               size, CONFIG_GNRC_PKTBUF_SIZE);

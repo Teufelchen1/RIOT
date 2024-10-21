@@ -34,7 +34,7 @@
 
 #include "gnrc_sock_internal.h"
 
-#define ENABLE_DEBUG 0
+#define ENABLE_DEBUG 1
 #include "debug.h"
 
 #ifdef MODULE_GNRC_SOCK_CHECK_REUSE
@@ -342,6 +342,8 @@ ssize_t sock_udp_sendv_aux(sock_udp_t *sock,
     sock_udp_ep_t remote_cpy;
     sock_ip_ep_t *rem;
 
+    gnrc_pktbuf_stats();
+
     assert((sock != NULL) || (remote != NULL));
 
     if (remote != NULL) {
@@ -427,6 +429,7 @@ ssize_t sock_udp_sendv_aux(sock_udp_t *sock,
     }
 
     /* allocate snip for payload */
+    DEBUG("udp: allocate snip: %d\n", iolist_size(snips));
     payload = gnrc_pktbuf_add(NULL, NULL, iolist_size(snips), GNRC_NETTYPE_UNDEF);
     if (payload == NULL) {
         return -ENOMEM;
@@ -435,6 +438,7 @@ ssize_t sock_udp_sendv_aux(sock_udp_t *sock,
     /* copy payload data into payload snip */
     iolist_to_buffer(snips, payload->data, payload->size);
 
+    DEBUG("udp: build hdr\n");
     pkt = gnrc_udp_hdr_build(payload, src_port, dst_port);
     if (pkt == NULL) {
         gnrc_pktbuf_release(payload);

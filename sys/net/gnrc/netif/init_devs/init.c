@@ -169,7 +169,7 @@ void gnrc_netif_init_devs(void)
 
     if (IS_USED(MODULE_NRF802154)) {
         extern void auto_init_nrf802154(void);
-        auto_init_nrf802154();
+        //auto_init_nrf802154();
     }
 
     if (IS_USED(MODULE_SX126X) && !IS_USED(MODULE_SEMTECH_LORAMAC)) {
@@ -185,6 +185,11 @@ void gnrc_netif_init_devs(void)
     if (IS_USED(MODULE_W5500)) {
         extern void auto_init_w5500(void);
         auto_init_w5500();
+    }
+
+    if (IS_USED(MODULE_SLIPMUX)) {
+        extern void auto_init_slipmux(void);
+        auto_init_slipmux();
     }
 
 }

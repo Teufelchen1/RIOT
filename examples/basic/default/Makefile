@@ -7,6 +7,7 @@ BOARD ?= native
 # This has to be the absolute path to the RIOT base directory:
 RIOTBASE ?= $(CURDIR)/../../..
 
+DEBUG_ASSERT_VERBOSE := 1
 # Uncomment these lines if you want to use platform support from external
 # repositories:
 #RIOTCPU ?= $(CURDIR)/../../RIOT/thirdparty_cpu
@@ -27,10 +28,23 @@ DEVELHELP ?= 1
 # Change this to 0 show compiler invocation lines by default:
 QUIET ?= 1
 
+USEMODULE += mpu_stack_guard
+
 # Modules to include:
 USEMODULE += shell
 USEMODULE += shell_cmds_default
 USEMODULE += ps
+USEMODULE += slipmux
+USEMODULE += stdio_slipmux
+
+#USEMODULE += nanocoap_resources
+USEMODULE += gcoap
+USEMODULE += netdev_default
+USEMODULE += auto_init_gnrc_netif
+USEMODULE += gnrc_ipv6_default
+USEMODULE += gnrc_icmpv6_echo
+
+
 # include and auto-initialize all available sensors
 USEMODULE += saul_default
 

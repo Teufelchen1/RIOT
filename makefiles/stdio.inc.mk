@@ -7,6 +7,7 @@ STDIO_MODULES = \
   stdio_null \
   stdio_rtt \
   stdio_semihosting \
+  stdio_slipmux \
   stdio_uart \
   stdio_udp \
   stdio_telnet \
@@ -87,6 +88,11 @@ endif
 ifneq (,$(filter stdio_semihosting,$(USEMODULE)))
   USEMODULE += ztimer_msec
   FEATURES_REQUIRED_ANY += cpu_core_cortexm|arch_riscv
+endif
+
+ifneq (,$(filter slipmux,$(USEMODULE)))
+  FEATURES_REQUIRED_ANY += periph_uart|periph_lpuart
+  PSEUDOMODULES += stdio_slipmux
 endif
 
 ifneq (,$(filter stdio_telnet,$(USEMODULE)))

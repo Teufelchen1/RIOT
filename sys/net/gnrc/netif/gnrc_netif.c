@@ -2088,6 +2088,7 @@ static void *_gnrc_netif_thread(void *args)
 
 static void _pass_on_packet(gnrc_pktsnip_t *pkt)
 {
+    DEBUG("gnrc_netif: got packet of type %i\n", pkt->type);
     /* throw away packet if no one is interested */
     if (!gnrc_netapi_dispatch_receive(pkt->type, GNRC_NETREG_DEMUX_CTX_ALL,
                                       pkt)) {
@@ -2130,12 +2131,15 @@ static void _event_cb(netdev_t *dev, netdev_event_t event)
                 }
                 break;
             case NETDEV_EVENT_RX_COMPLETE:
+                DEBUG("gnrc_netif: rx complete\n");
                 pkt = netif->ops->recv(netif);
                 /* send packet previously queued within netif due to the lower
                  * layer being busy.
                  * Further packets will be sent on later TX_COMPLETE */
+                 DEBUG("gnrc_netif: send queued\n");
                 _send_queued_pkt(netif);
                 if (pkt) {
+                    DEBUG("gnrc_netif: passing on\n");
                     _process_receive_stats(netif, pkt);
                     _pass_on_packet(pkt);
                 }
