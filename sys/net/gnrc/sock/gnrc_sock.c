@@ -38,6 +38,10 @@
 #include "sock_types.h"
 #include "gnrc_sock_internal.h"
 
+#define ENABLE_DEBUG        1
+#include "debug.h"
+
+
 #ifdef MODULE_FUZZING
 extern gnrc_pktsnip_t *gnrc_pktbuf_fuzzptr;
 gnrc_pktsnip_t *gnrc_sock_prevpkt = NULL;
@@ -69,7 +73,7 @@ static void _netapi_cb(uint16_t cmd, gnrc_pktsnip_t *pkt, void *ctx)
         gnrc_sock_reg_t *reg = ctx;
 
         if (mbox_try_put(&reg->mbox, &msg) < 1) {
-            LOG_WARNING("gnrc_sock: dropped message to %p (was full)\n",
+            DEBUG("gnrc_sock: dropped message to %p (was full)\n",
                         (void *)&reg->mbox);
             /* packet could not be delivered so it should be dropped */
             gnrc_pktbuf_release(pkt);
@@ -157,7 +161,7 @@ ssize_t gnrc_sock_recv(gnrc_sock_reg_t *reg, gnrc_pktsnip_t **pkt_out,
         if (reg->async_cb.generic) {
             /* this warning is a false positive when sock_*_recv() was not called from
              * the asynchronous handler */
-            LOG_WARNING("gnrc_sock: timeout != 0 within the asynchronous callback lead "
+            DEBUG("gnrc_sock: timeout != 0 within the asynchronous callback lead "
                         "to unexpected delays within the asynchronous handler.\n");
         }
 #endif
