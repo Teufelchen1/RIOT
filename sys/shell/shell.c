@@ -46,7 +46,9 @@
 #endif
 
 /* define shell command cross file array */
-XFA_INIT_CONST(shell_command_xfa_t, shell_commands_xfa_v2);
+XFA_INIT_CONST(shell_command_xfa_t*, shell_commands_xfa);
+XFA_INIT_CONST(coap_resource_t, coap_resources_xfa);
+
 
 #define ETX '\x03'  /** ASCII "End-of-Text", or Ctrl-C */
 #define EOT '\x04'  /** ASCII "End-of-Transmission", or Ctrl-D */
@@ -82,6 +84,32 @@ enum parse_state {
     PARSE_SINGLEQUOTE_ESC   = 0x6,
     PARSE_DOUBLEQUOTE_ESC   = 0x7,
 };
+
+// __attribute__ ((unused))
+// ssize_t _cmd_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len, coap_request_ctx_t *context)
+// {
+//     shell_command_handler_t handler = (shell_command_handler_t) context->resource->context;
+//     int argc = 1;
+//     char *argv[argc + 1];
+//     argv[0] = "test";
+//     argv[argc] = NULL;
+//     int res = handler(argc, argv);
+//     if (res == 0) {
+//         return coap_reply_simple(pkt, COAP_CODE_205, buf, len,
+//             COAP_FORMAT_TEXT, (uint8_t*)"SUCCESS", strlen("SUCCESS"));
+//     }
+//     return coap_reply_simple(pkt, COAP_CODE_BAD_REQUEST, buf, len,
+//             COAP_FORMAT_TEXT, (uint8_t*)"FAILED", strlen("FAILED"));
+// }
+
+__attribute__ ((unused))
+ssize_t _cmd_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len, coap_request_ctx_t *context)
+{
+    shell_command_t *cmd = (shell_command_t *) context->resource->context;
+    return coap_reply_simple(pkt, COAP_CODE_205, buf, len,
+            COAP_FORMAT_TEXT, (uint8_t*)cmd->desc, strlen(cmd->desc));
+
+}
 
 static enum parse_state escape_toggle(enum parse_state s)
 {
@@ -506,6 +534,13 @@ int shell_readline(char *buf, size_t size)
 void shell_run_once(const shell_command_t *shell_commands,
                     char *line_buf, int len)
 {
+    XFA_USE_CONST(coap_resource_t, coap_resources_xfa);
+    static gcoap_listener_t _xfa_listener = {
+        .resources = coap_resources_xfa,
+    };
+    _xfa_listener.resources_len = XFA_LEN(coap_resource_t, coap_resources_xfa),
+
+    gcoap_register_listener(&_xfa_listener);
     if (IS_USED(MODULE_SHELL_LOCK)) {
         shell_lock_checkpoint(line_buf, len);
     }

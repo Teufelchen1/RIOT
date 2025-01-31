@@ -1624,9 +1624,10 @@ static void _test_options(gnrc_netif_t *netif)
 #if IS_USED(MODULE_SLIPDEV_L2ADDR)
             assert(netif->flags & GNRC_NETIF_FLAGS_HAS_L2ADDR);
             assert(8U == netif->l2addr_len);
-            break;
+            //break;
 #endif /* IS_USED(MODULE_SLIPDEV_L2ADDR) */
-        case NETDEV_TYPE_LORA: /* LoRa doesn't provide L2 ADDR */
+	    break;
+	case NETDEV_TYPE_LORA: /* LoRa doesn't provide L2 ADDR */
             assert(!(netif->flags & GNRC_NETIF_FLAGS_HAS_L2ADDR));
             assert(0U == netif->l2addr_len);
             /* don't check MTU here for now since I'm not sure the current

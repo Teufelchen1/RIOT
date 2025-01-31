@@ -34,10 +34,10 @@ use crate::riot_sys::thread_getpid;
 extern "C" {
     fn gnrc_netif_raw_create(
         netif: *mut gnrc_netif_t,
-        stack: *mut riot_sys::libc::c_char,
+        stack: *mut u8,
         stacksize: i32,
         priority: u8,
-        name: *const riot_sys::libc::c_char,
+        name: *const u8,
         dev: *mut netdev,
     ) -> i32;
 }
@@ -131,7 +131,7 @@ pub extern "C" fn auto_init_slipmux() {
 
 #[no_mangle]
 pub extern "C" fn stdio_init() {
-    let result = unsafe { uart_init(UARTDevice::new(0).dev, 115200, None, core::ptr::null_mut()) };
+    //let result = unsafe { uart_init(UARTDevice::new(0).dev, 115200, None, core::ptr::null_mut()) };
 }
 
 #[no_mangle]
@@ -290,12 +290,13 @@ extern "C" fn _get(
             unsafe { (*typ) = NETDEV_TYPE_SLIP as u16 };
             2
         }
-        _ => -134,
+        _ => -95,
+       // _ => -134,
     }
 }
 extern "C" fn _set(
     _: *mut riot_wrappers::riot_sys::netdev,
-    _: u8,
+    _: u32,
     _: *const c_void,
     _: u32,
 ) -> i32 {
@@ -321,7 +322,7 @@ fn sec_thread() {
     unsafe { slip_recv_init() };
     let mut buffer: [u8; 512] = [0; 512];
     loop {
-        let len = unsafe { slip_recv(buffer.as_mut_ptr()) } as usize;
+        let len = unsafe { slip_recv(buffer.as_mut_ptr() as *mut i8) } as usize;
         {
             let lock = WRITE_SYNC.lock();
             let uart = unsafe { STDOUT };
@@ -358,7 +359,9 @@ fn sec_thread() {
 static mut secondthread_main: &'static mut (dyn Send + FnMut()) = &mut || sec_thread();
 
 fn init() -> Result<(), &'static str> {
-    let nif: *mut _ = NETIF.init(gnrc_netif_t::default());
+    let mut nif_ = gnrc_netif_t::default();
+    nif_.flags = 0;
+    let nif: *mut _ = NETIF.init(nif_);
     //let ndev: *mut _ = NETDEV.init(netdev_t::default());
     let uart = SLIPUART.init(UARTDevice::new(0));
     unsafe { STDOUT = Some(uart) };

@@ -49,6 +49,7 @@
 #include <stdint.h>
 #include "periph/pm.h"
 
+#include "net/gcoap.h"
 #include "modules.h"
 #include "xfa.h"
 
@@ -208,6 +209,26 @@ typedef struct {
  */
 void shell_run_once(const shell_command_t *commands, char *line_buf, int len);
 
+// static ssize_t _shell_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, coap_request_ctx_t *ctx);
+// {
+//     (void)ctx;
+//         return gcoap_response(pdu, buf, len, COAP_CODE_INTERNAL_SERVER_ERROR);
+// }
+
+// static const coap_resource_t _resources[] = {
+//     { "/shell", COAP_GET, _shell_handler, NULL },
+// };
+
+
+// static gcoap_listener_t _listener = {
+//     &_resources[0],
+//     ARRAY_SIZE(_resources),
+//     GCOAP_SOCKET_TYPE_UNDEF,
+//     NULL,
+//     NULL,
+//     NULL
+// };
+
 /**
  * @brief           Start a shell and restart it if it exits
  *
@@ -296,6 +317,32 @@ int shell_parse_file(const shell_command_t *commands,
 int shell_readline(char *buf, size_t size);
 
 #ifndef __cplusplus
+
+
+#define SHELLGCOAP_RESOURCE(name) \
+    XFA_CONST(coap_resources_xfa, 0) coap_resource_t CONCAT(coap_resource_, name) =
+
+// __attribute__ ((unused))
+// static ssize_t _cmd_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len, coap_request_ctx_t *context)
+// {
+//     // char *handler = (char *) context->resource->context;
+//     // puts(handler);
+//     //printf("In handler: %p\n", handler);
+//     //printf("In handler: %ld\n", ((uint32_t *) handler)[0]);
+//     //int res = ((int (*)(int, char **))(context))(0, NULL);
+//     shell_command_handler_t handler = (shell_command_handler_t) context->resource->context;
+//     int argc = 1;
+//     char *argv[argc + 1];
+//     argv[0] = "test";
+//     argv[argc] = NULL;
+//     int res = handler(argc, argv);
+//     if (res == 0) {
+//         return coap_reply_simple(pkt, COAP_CODE_205, buf, len,
+//             COAP_FORMAT_TEXT, (uint8_t*)"SUCCESS", strlen("SUCCESS"));
+//     }
+//     return coap_reply_simple(pkt, COAP_CODE_BAD_REQUEST, buf, len,
+//             COAP_FORMAT_TEXT, (uint8_t*)"FAILED", strlen("FAILED"));
+// }
 /**
  * @brief   Define shell command
  *
@@ -333,7 +380,13 @@ int shell_readline(char *buf, size_t size);
         .name = _xfa_ ## cmd ## _cmd_name, \
         .desc = _xfa_ ## cmd ## _cmd_desc, \
         .handler = &func \
-    };
+    }; \
+    XFA_ADD_PTR(shell_commands_xfa, cmd, cmd, &_xfa_ ## cmd ## _cmd); \
+    extern ssize_t _cmd_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len, coap_request_ctx_t *context); \
+    SHELLGCOAP_RESOURCE(cmd) { \
+        .path = "/shell/" #cmd, .methods = COAP_GET, .handler = _cmd_handler, .context = (void *) &_xfa_ ## cmd ## _cmd \
+    }
+
 #endif /* __cplusplus */
 
 #ifdef __cplusplus

@@ -15,6 +15,9 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <unistd.h>
 #include <termios.h>
 #include <fcntl.h>
 
@@ -43,6 +46,7 @@ static int tty_fds[UART_NUMOF];
 
 void tty_uart_setup(uart_t uart, const char *filename)
 {
+	//DEBUG("UART SETUP");
     tty_device_filenames[uart] = strndup(filename, PATH_MAX - 1);
 }
 
@@ -92,7 +96,8 @@ static void io_signal_handler(int fd, void *arg)
 
 int uart_init(uart_t uart, uint32_t baudrate, uart_rx_cb_t rx_cb, void *arg)
 {
-    if (uart >= UART_NUMOF) {
+    //DEBUG("UART INIT");
+	if (uart >= UART_NUMOF) {
         return UART_NODEV;
     }
 
@@ -147,21 +152,30 @@ int uart_init(uart_t uart, uint32_t baudrate, uart_rx_cb_t rx_cb, void *arg)
 
     cfsetospeed(&termios, speed);
     cfsetispeed(&termios, speed);
-
-    tty_fds[uart] = real_open(tty_device_filenames[uart], O_RDWR | O_NONBLOCK);
-
-    if (tty_fds[uart] < 0) {
+    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    struct sockaddr_un addr;
+    addr.sun_family = AF_UNIX;
+    strcpy(addr.sun_path, tty_device_filenames[uart]);
+    unlink(tty_device_filenames[uart]);
+    bind(fd, (struct sockaddr *) &addr, sizeof(addr));
+    real_write(1, "Listening...\n", 13);
+    listen(fd, 1);
+    real_write(1, "Accepting...\n", 13);
+    tty_fds[uart] = accept(fd, NULL, NULL);//real_open(tty_device_filenames[uart], O_RDWR | O_NONBLOCK);
+    real_write(1, "Accepted!...\n", 13);
+    int i = tty_fds[uart];
+    if (i < 0) {
         return UART_INTERR;
     }
 
-    tcsetattr(tty_fds[uart], TCSANOW, &termios);
+    //tcsetattr(tty_fds[uart], TCSANOW, &termios);
 
     uart_config[uart].rx_cb = rx_cb;
     uart_config[uart].arg = arg;
 
     native_async_read_setup();
     native_async_read_add_handler(tty_fds[uart], NULL, io_signal_handler);
-
+    //DEBUG("UART_OK");
     return UART_OK;
 }
 
@@ -181,6 +195,7 @@ void uart_write(uart_t uart, const uint8_t *data, size_t len)
     DEBUG("\n");
 
     if (tty_fds[uart] >= 0) {
+        real_write(1, data, len);
         _native_write(tty_fds[uart], data, len);
     }
 }

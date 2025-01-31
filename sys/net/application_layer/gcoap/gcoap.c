@@ -39,6 +39,8 @@
 #include "random.h"
 #include "thread.h"
 #include "ztimer.h"
+#include "xfa.h"
+#include "shell.h"
 
 #if IS_USED(MODULE_GCOAP_DTLS)
 #include "net/sock/dtls.h"
@@ -46,7 +48,7 @@
 #include "net/dsm.h"
 #endif
 
-#define ENABLE_DEBUG 1
+#define ENABLE_DEBUG 0
 #include "debug.h"
 #include "fmt.h"
 
@@ -67,6 +69,8 @@ static ssize_t _tl_send(gcoap_socket_t *sock, const void *data, size_t len,
 static ssize_t _tl_authenticate(gcoap_socket_t *sock, const sock_udp_ep_t *remote,
                                 uint32_t timeout);
 static ssize_t _well_known_core_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len,
+                                        coap_request_ctx_t *ctx);
+static ssize_t _riot_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len,
                                         coap_request_ctx_t *ctx);
 static void _cease_retransmission(gcoap_request_memo_t *memo);
 static size_t _handle_req(gcoap_socket_t *sock, coap_pkt_t *pdu, uint8_t *buf,
@@ -114,31 +118,31 @@ static char _ipv6_addr_str[IPV6_ADDR_MAX_STR_LEN];
 /* Internal variables */
 const coap_resource_t _default_resources[] = {
     { "/.well-known/core", COAP_GET, _well_known_core_handler, NULL },
-    { "/.well-known/core2", COAP_GET, _well_known_core_handler, NULL },
+    { "/.riot/", COAP_GET, _riot_handler, NULL },
 };
 
-static ssize_t _encode_link(const coap_resource_t *resource, char *buf,
-                            size_t maxlen, coap_link_encoder_ctx_t *context) {
-    ssize_t res = gcoap_encode_link(resource, buf, maxlen, context);
-    // if (res > 0) {
-    //     if (_link_params[context->link_pos]
-    //             && (strlen(_link_params[context->link_pos]) < (maxlen - res))) {
-    //         if (buf) {
-    //             memcpy(buf+res, _link_params[context->link_pos],
-    //                    strlen(_link_params[context->link_pos]));
-    //         }
-    //         return res + strlen(_link_params[context->link_pos]);
-    //     }
-    // }
+// static ssize_t _encode_link(const coap_resource_t *resource, char *buf,
+//                             size_t maxlen, coap_link_encoder_ctx_t *context) {
+//     ssize_t res = gcoap_encode_link(resource, buf, maxlen, context);
+//     // if (res > 0) {
+//     //     if (_link_params[context->link_pos]
+//     //             && (strlen(_link_params[context->link_pos]) < (maxlen - res))) {
+//     //         if (buf) {
+//     //             memcpy(buf+res, _link_params[context->link_pos],
+//     //                    strlen(_link_params[context->link_pos]));
+//     //         }
+//     //         return res + strlen(_link_params[context->link_pos]);
+//     //     }
+//     // }
 
-    return res;
-}
+//     return res;
+// }
 
 static gcoap_listener_t _default_listener = {
     &_default_resources[0],
     ARRAY_SIZE(_default_resources),
     GCOAP_SOCKET_TYPE_UNDEF,
-    _encode_link,
+    NULL,
     NULL,
     _request_matcher_default,
 };
@@ -1101,12 +1105,50 @@ static ssize_t _well_known_core_handler(coap_pkt_t* pdu, uint8_t *buf, size_t le
                                         coap_request_ctx_t *ctx)
 {
     (void)ctx;
-    DEBUG("wkc\n");
     gcoap_resp_init(pdu, buf, len, COAP_CODE_CONTENT);
     coap_opt_add_format(pdu, COAP_FORMAT_LINK);
     ssize_t plen = coap_opt_finish(pdu, COAP_OPT_FINISH_PAYLOAD);
 
     plen += gcoap_get_resource_list(pdu->payload, (size_t)pdu->payload_len,
+                                       COAP_FORMAT_LINK,
+                                       (gcoap_socket_type_t)coap_request_ctx_get_tl_type(ctx));
+    return plen;
+}
+
+int gcoap_get_cmd_list(void *buf, size_t maxlen, uint8_t cf,
+                               gcoap_socket_type_t tl_type)
+{
+    assert(cf == COAP_FORMAT_LINK);
+    (void) tl_type;
+
+    char *out = (char *)buf;
+    size_t pos = 0;
+    XFA_USE_CONST(shell_command_xfa_t*, shell_commands_xfa);
+
+    unsigned n = XFA_LEN(shell_command_xfa_t*, shell_commands_xfa);
+    for (unsigned i = 0; i < n && pos < maxlen; i++) {
+        const volatile shell_command_xfa_t *entry = shell_commands_xfa[i];
+        size_t size = strlen(entry->name);
+        if (out && pos+size+3 < maxlen) {
+            out[pos] = '<';
+            memcpy(&out[pos+1], entry->name, size);
+            out[pos+1+size] = '>';
+            out[pos+2+size] = ',';
+        }
+        pos += size+3;
+    }
+
+    return (int)pos;
+}
+
+static ssize_t _riot_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len,
+                                        coap_request_ctx_t *ctx)
+{
+    (void)ctx;
+    gcoap_resp_init(pdu, buf, len, COAP_CODE_CONTENT);
+    coap_opt_add_format(pdu, COAP_FORMAT_LINK);
+    ssize_t plen = coap_opt_finish(pdu, COAP_OPT_FINISH_PAYLOAD);
+    plen += gcoap_get_cmd_list(pdu->payload, (size_t)pdu->payload_len,
                                        COAP_FORMAT_LINK,
                                        (gcoap_socket_type_t)coap_request_ctx_get_tl_type(ctx));
     return plen;
@@ -1661,7 +1703,7 @@ kernel_pid_t gcoap_init(void)
     static gcoap_listener_t _xfa_listener = {
         .resources = coap_resources_xfa,
     };
-    _xfa_listener.resources_len = XFA_LEN(coap_resource_t, coap_resources_xfa),
+    _xfa_listener.resources_len = XFA_LEN(coap_resource_t, coap_resources_xfa);
 
     gcoap_register_listener(&_xfa_listener);
 #endif

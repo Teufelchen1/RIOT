@@ -267,7 +267,7 @@ void _native_call_sig_handlers_and_switch(void)
             warnx("call sig handlers + switch: ignoring SIGUSR1");
         }
         else {
-            errx(EXIT_FAILURE, "XXX: no handler for signal %i\nXXX: this should not have happened!\n", sig);
+            //warnx( "XXX: no handler for signal %i\nXXX: this should not have happened!\n", sig);
         }
     }
 
@@ -293,6 +293,7 @@ void native_signal_action(int sig, siginfo_t *info, void *context)
     if (thread_get_active() == NULL) {
         _native_in_isr++;
         warnx("native_signal_action: thread_get_active() is null - unhandled");
+
         _native_in_isr--;
         return;
     }

@@ -34,7 +34,7 @@
 
 #include "gnrc_sock_internal.h"
 
-#define ENABLE_DEBUG 1
+#define ENABLE_DEBUG 0
 #include "debug.h"
 
 #ifdef MODULE_GNRC_SOCK_CHECK_REUSE
@@ -342,7 +342,7 @@ ssize_t sock_udp_sendv_aux(sock_udp_t *sock,
     sock_udp_ep_t remote_cpy;
     sock_ip_ep_t *rem;
 
-    gnrc_pktbuf_stats();
+    //gnrc_pktbuf_stats();
 
     assert((sock != NULL) || (remote != NULL));
 
