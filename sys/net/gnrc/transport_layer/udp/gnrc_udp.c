@@ -151,7 +151,7 @@ static void _receive(gnrc_pktsnip_t *pkt)
 
     /* get port (netreg demux context) */
     port = (uint32_t)byteorder_ntohs(hdr->dst_port);
-    DEBUG("udp: PORT %ld\n", port);
+    //DEBUG("udp: PORT %ld\n", port);
 
     /* send payload to receivers */
     if (!gnrc_netapi_dispatch_receive(GNRC_NETTYPE_UDP, port, pkt)) {

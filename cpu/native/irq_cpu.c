@@ -280,7 +280,7 @@ void native_irq_handler(void)
             warnx("native_irq_handler: ignoring SIGUSR1");
         }
         else {
-            errx(EXIT_FAILURE, "XXX: no handler for signal %i\nXXX: this should not have happened!\n", sig);
+            //warnx( "XXX: no handler for signal %i\nXXX: this should not have happened!\n", sig);
         }
     }
 
@@ -314,7 +314,7 @@ void native_isr_entry(int sig, siginfo_t *info, void *context)
     }
     if (thread_get_active() == NULL) {
         _native_in_isr++;
-        warnx("native_isr_entry: thread_get_active() is null - unhandled");
+        //warnx("native_isr_entry: thread_get_active() is null - unhandled");
         _native_in_isr--;
         return;
     }

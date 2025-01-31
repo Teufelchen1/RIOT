@@ -470,7 +470,7 @@ __attribute__((constructor)) static void startup(int argc, char **argv, char **e
 {
     _native_init_syscalls();
     /* initialize stdio as early as possible */
-    early_init();
+    //early_init();
 
     /* Passing argc, argv, and envp to init_fini handlers is a glibc
      * extension. If we are not running glibc, we parse /proc/self/cmdline
@@ -707,7 +707,8 @@ __attribute__((constructor)) static void startup(int argc, char **argv, char **e
         ++init_array_ptr;
     }
     DEBUG("done, __init_array_end: %p\n", (void *)init_array_ptr);
-
+    
+    early_init();
     native_cpu_init();
     native_interrupt_init();
 #ifdef MODULE_NETDEV_TAP

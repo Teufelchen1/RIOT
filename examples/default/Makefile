@@ -28,7 +28,7 @@ DEVELHELP ?= 1
 # Change this to 0 show compiler invocation lines by default:
 QUIET ?= 1
 
-USEMODULE += mpu_stack_guard
+#USEMODULE += mpu_stack_guard
 
 # Modules to include:
 USEMODULE += shell
@@ -44,6 +44,8 @@ USEMODULE += auto_init_gnrc_netif
 USEMODULE += gnrc_ipv6_default
 USEMODULE += gnrc_icmpv6_echo
 
+USEMODULE += event_periodic
+USEMODULE += event_thread
 
 # include and auto-initialize all available sensors
 USEMODULE += saul_default
