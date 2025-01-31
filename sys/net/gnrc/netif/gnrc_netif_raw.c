@@ -75,7 +75,8 @@ static gnrc_pktsnip_t *_recv(gnrc_netif_t *netif)
         ip->nh = PROTNUM_UDP;
         ip->v_tc_fl.u8[0] = 0xf0 & 0x60;
 
-        udp_hdr_t *udp = pkt->data + sizeof(ipv6_hdr_t);
+        // FIXEM
+	udp_hdr_t *udp = (udp_hdr_t *)((uint8_t*)pkt->data + sizeof(ipv6_hdr_t));
         udp->src_port = byteorder_htons(0x1111);
         udp->dst_port = byteorder_htons(0x1633);
         udp->checksum.u16 = 0;
