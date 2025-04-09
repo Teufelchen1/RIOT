@@ -59,14 +59,14 @@ int slip_recv(char *buff) {
     reply.content.value = -ENOTSUP;
     while (1) {
         msg_receive(&msg);
-        puts("Got a packet\n");
+        //puts("Got a packet\n");
         switch (msg.type) {
             case GNRC_NETAPI_MSG_TYPE_RCV:
                 pkt = msg.content.ptr;
                 //dump_pkt(pkt);
                 memcpy(buff, pkt->data, pkt->size);
                 int len = pkt->size;
-                printf("slip_recv: users %d\n\n", pkt->users);
+                //printf("slip_recv: users %d\n\n", pkt->users);
                 if (pkt->next) {
                     if (pkt->next->type == GNRC_NETTYPE_NETIF) {
                         pkt = gnrc_pktbuf_remove_snip(pkt, pkt->next);
