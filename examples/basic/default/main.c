@@ -30,6 +30,54 @@
 #include "net/gnrc/pktdump.h"
 #include "net/gnrc.h"
 
+#include "nanocbor/nanocbor.h"
+
+ssize_t _sample_command_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len,
+                                  coap_request_ctx_t *context)
+{
+    (void) context;
+    char buffer[100];
+
+    nanocbor_value_t decoder;
+    nanocbor_value_t array;
+    nanocbor_decoder_init(&decoder, pkt->payload, pkt->payload_len);
+    nanocbor_enter_array(&decoder, &array);
+    bool caps = false;
+    uint8_t repeats = 1;
+    if ((nanocbor_get_bool(&array, &caps) < 0) || (nanocbor_get_uint8(&array, &repeats) < 0)) {
+      return coap_reply_simple(pkt, COAP_CODE_UNPROCESSABLE_ENTITY, buf, len,
+            COAP_FORMAT_NONE, NULL, 0);
+    }
+
+    for (int i = 0; i < 100; ++i)
+    {
+        buffer[i] = 'a';
+    }
+    buffer[99] = 0;
+
+    char * desc = "Hello ";
+    char * descCap = "HELLO ";
+
+    for (int i = 0; i < repeats; ++i)
+    {
+        if (caps) {
+            memcpy(&buffer[strlen(descCap)*i], descCap, strlen(descCap)+1);
+        } else {
+            memcpy(&buffer[strlen(desc)*i], desc, strlen(desc)+1);
+        }
+    }
+    // pkt->payload, pkt->payload_len
+    
+
+     return coap_reply_simple(pkt, COAP_CODE_205, buf, len,
+            COAP_FORMAT_CBOR, (uint8_t*)buffer, strlen(buffer));
+}
+
+NANOCOAP_RESOURCE(cmd) { \
+    .path = "/SampleCommand", .methods = COAP_POST, .handler = _sample_command_handler, .context = NULL \
+};
+
+
 int main(void)
 {
 #ifdef MODULE_GNRC_PKTDUMP

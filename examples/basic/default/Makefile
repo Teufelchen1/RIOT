@@ -37,6 +37,8 @@ USEMODULE += ps
 # include and auto-initialize all available sensors
 USEMODULE += saul_default
 
+USEPKG += nanocbor
+
 # Use a network interface, if available. The handling is done in
 # Makefile.board.dep, which is processed recursively as part of the dependency
 # resolution.
