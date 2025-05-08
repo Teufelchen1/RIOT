@@ -73,8 +73,37 @@ ssize_t _sample_command_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len,
             COAP_FORMAT_CBOR, (uint8_t*)buffer, strlen(buffer));
 }
 
-NANOCOAP_RESOURCE(cmd) { \
+NANOCOAP_RESOURCE(sample_cmd) { \
     .path = "/SampleCommand", .methods = COAP_POST, .handler = _sample_command_handler, .context = NULL \
+};
+
+ssize_t _mem_read_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len,
+                                  coap_request_ctx_t *context)
+{
+    (void) context;
+    uint8_t buffer[260];
+
+    nanocbor_value_t decoder;
+    nanocbor_value_t array;
+    nanocbor_decoder_init(&decoder, pkt->payload, pkt->payload_len);
+    nanocbor_enter_array(&decoder, &array);
+
+    uint32_t addr = 0;
+    uint8_t size = 0;
+    if ((nanocbor_get_uint32(&array, &addr) < 0) || (nanocbor_get_uint8(&array, &size) < 0)) {
+      return coap_reply_simple(pkt, COAP_CODE_UNPROCESSABLE_ENTITY, buf, len,
+            COAP_FORMAT_NONE, NULL, 0);
+    }
+
+    nanocbor_encoder_t enc;
+    nanocbor_encoder_init(&enc, buffer, sizeof(buffer));
+    nanocbor_put_bstr(&enc,(uint8_t *) addr, size);
+    return coap_reply_simple(pkt, COAP_CODE_205, buf, len,
+            COAP_FORMAT_CBOR, (uint8_t*)buffer, nanocbor_encoded_len(&enc));
+}
+
+NANOCOAP_RESOURCE(mem_cmd) { \
+    .path = "/Memory", .methods = COAP_POST, .handler = _mem_read_handler, .context = NULL \
 };
 
 
