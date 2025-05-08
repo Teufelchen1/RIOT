@@ -73,7 +73,7 @@ ssize_t _sample_command_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len,
             COAP_FORMAT_CBOR, (uint8_t*)buffer, strlen(buffer));
 }
 
-NANOCOAP_RESOURCE(cmd) { \
+NANOCOAP_RESOURCE(sample_cmd) { \
     .path = "/SampleCommand", .methods = COAP_POST, .handler = _sample_command_handler, .context = NULL \
 };
 

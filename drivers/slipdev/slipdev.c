@@ -35,7 +35,7 @@
 #include "net/nanocoap.h"
 #include "stdio_uart.h"
 
-static char coap_stack[1024];
+static char coap_stack[1270];
 
 static int _check_state(slipdev_t *dev);
 
