@@ -16,6 +16,7 @@ static const char *_devname(saul_reg_t *dev) {
 /* this function does not check, if the given device is valid */
 static void probe(int num, saul_reg_t *dev, nanocbor_encoder_t *enc)
 {
+    (void) num;
     int dim;
     phydat_t res;
 
