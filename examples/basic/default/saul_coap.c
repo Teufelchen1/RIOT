@@ -114,7 +114,6 @@ static void _reg_write(int num, int data_src)
         }
         return;
     }
-    printf("data successfully written to device #%i\n", num);
 }
 
 ssize_t _saul_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len,
