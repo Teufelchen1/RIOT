@@ -46,7 +46,7 @@ mutex_t slipdev_mutex = MUTEX_INIT;
 #if IS_USED(MODULE_SLIPDEV_CONFIG)
 /* The special init is the result of normal fcs init combined with slipmux config start (0xa9) */
 #define SPECIAL_INIT_FCS (0x374cU)
-#define COAP_STACKSIZE (1024)
+#define COAP_STACKSIZE (1024*4)
 
 static char coap_stack[COAP_STACKSIZE];
 #endif /* IS_USED(MODULE_SLIPDEV_CONFIG) */
