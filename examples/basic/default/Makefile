@@ -1,6 +1,11 @@
 # name of your application
 APPLICATION = default
 
+# Use jelly with TUI
+RIOT_TERMINAL = jellyTui
+# or without TUI, but thats diagnostic only :(
+# RIOT_TERMINAL = jelly
+
 # If no BOARD is found in the environment, use this default:
 BOARD ?= native
 
