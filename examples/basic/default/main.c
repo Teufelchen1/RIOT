@@ -32,7 +32,10 @@
 
 #include "nanocbor/nanocbor.h"
 
-ssize_t _sample_command_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len,
+#define MAIN_QUEUE_SIZE     (8)
+static msg_t _main_msg_queue[MAIN_QUEUE_SIZE];
+
+static ssize_t _sample_command_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len,
                                   coap_request_ctx_t *context)
 {
     (void) context;
@@ -66,18 +69,12 @@ ssize_t _sample_command_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len,
             memcpy(&buffer[strlen(desc)*i], desc, strlen(desc)+1);
         }
     }
-    // pkt->payload, pkt->payload_len
-    
 
-     return coap_reply_simple(pkt, COAP_CODE_205, buf, len,
-            COAP_FORMAT_CBOR, (uint8_t*)buffer, strlen(buffer));
+    return coap_reply_simple(pkt, COAP_CODE_205, buf, len,
+        COAP_FORMAT_CBOR, (uint8_t*)buffer, strlen(buffer));
 }
 
-NANOCOAP_RESOURCE(sample_cmd) { \
-    .path = "/SampleCommand", .methods = COAP_POST, .handler = _sample_command_handler, .context = NULL \
-};
-
-ssize_t _mem_read_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len,
+static ssize_t _mem_read_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len,
                                   coap_request_ctx_t *context)
 {
     (void) context;
@@ -102,9 +99,36 @@ ssize_t _mem_read_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len,
             COAP_FORMAT_CBOR, (uint8_t*)buffer, nanocbor_encoded_len(&enc));
 }
 
-NANOCOAP_RESOURCE(mem_cmd) { \
-    .path = "/Memory", .methods = COAP_POST, .handler = _mem_read_handler, .context = NULL \
+static ssize_t _riot_version_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len, coap_request_ctx_t *context)
+{
+    (void)context;
+    return coap_reply_simple(pkt, COAP_CODE_205, buf, len,
+            COAP_FORMAT_TEXT, (uint8_t*)RIOT_VERSION, strlen(RIOT_VERSION));
+}
+
+static ssize_t _riot_board_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len, coap_request_ctx_t *context)
+{
+    (void)context;
+    return coap_reply_simple(pkt, COAP_CODE_205, buf, len,
+            COAP_FORMAT_TEXT, (uint8_t*)RIOT_BOARD, strlen(RIOT_BOARD));
+}
+
+NANOCOAP_RESOURCE(sample_cmd) { \
+    .path = "/jelly/SampleCommand", .methods = COAP_POST, .handler = _sample_command_handler, .context = NULL \
 };
+
+NANOCOAP_RESOURCE(mem_cmd) { \
+    .path = "/jelly/Memory", .methods = COAP_POST, .handler = _mem_read_handler, .context = NULL \
+};
+
+NANOCOAP_RESOURCE(riot_version) { \
+    .path = "/jelly/ver", .methods = COAP_GET, .handler = _riot_version_handler, .context = NULL \
+};
+
+NANOCOAP_RESOURCE(riot_board) { \
+    .path = "/jelly/board", .methods = COAP_GET, .handler = _riot_board_handler, .context = NULL \
+};
+
 
 
 int main(void)
@@ -116,6 +140,7 @@ int main(void)
 #endif
 
     (void) puts("Welcome to RIOT!");
+        msg_init_queue(_main_msg_queue, MAIN_QUEUE_SIZE);
 
     char line_buf[SHELL_DEFAULT_BUFSIZE];
     shell_run(NULL, line_buf, SHELL_DEFAULT_BUFSIZE);

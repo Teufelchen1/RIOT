@@ -2,6 +2,11 @@ DEVELHELP=0
 include ../Makefile.sys_common
 
 USEMODULE += app_metadata
+# automatically initialize the network interface for slipmux
+USEMODULE += auto_init_gnrc_netif
+USEMODULE += slipdev_stdio
+USEMODULE += slipdev_config
+USEMODULE += shell
 USEMODULE += shell_cmds_default
 USEMODULE += ps
 USEMODULE += ztimer_msec

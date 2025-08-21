@@ -35,9 +35,8 @@ USEMODULE += slipdev_config
 USEMODULE += shell
 USEMODULE += shell_cmds_default
 USEMODULE += ps
-# include and auto-initialize all available sensors
+USEMODULE += auto_init_gnrc_netif
 USEMODULE += saul_default
-#USEMODULE += senml
 USEMODULE += senml_saul
 
 USEPKG += nanocbor
