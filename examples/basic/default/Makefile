@@ -37,12 +37,16 @@ CFLAGS += "-DCONFIG_NANOCOAP_BLOCK_SIZE_EXP_MAX=10"
 # Modules to include:
 USEMODULE += slipdev_stdio
 USEMODULE += slipdev_config
+USEMODULE += slipdev_l2addr
 USEMODULE += shell
 USEMODULE += shell_cmds_default
 USEMODULE += ps
+USEMODULE += netdev_default
 USEMODULE += auto_init_gnrc_netif
 USEMODULE += saul_default
 USEMODULE += senml_saul
+USEMODULE += gnrc_icmpv6_echo
+USEMODULE += gnrc_ipv6_auto_subnets_simple
 
 USEPKG += nanocbor
 
