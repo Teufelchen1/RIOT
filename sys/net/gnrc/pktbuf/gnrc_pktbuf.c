@@ -101,13 +101,6 @@ void gnrc_pktbuf_release_error(gnrc_pktsnip_t *pkt, uint32_t err)
             DEBUG_BREAKPOINT(3);
         }
 
-        if (pkt->type == GNRC_NETTYPE_UDP) {
-            DEBUG("pktbuf: Releasing udp: %d, %d\n", pkt->users, pkt->size);
-        }
-        if (pkt->type == GNRC_NETTYPE_IPV6) {
-            DEBUG("pktbuf: Releasing ipv6: %d, %d\n", pkt->users, pkt->size);
-        }
-
         if (pkt->users == 1) {
             pkt->users = 0; /* not necessary but to be on the safe side */
             if (!IS_USED(MODULE_GNRC_TX_SYNC)
@@ -122,7 +115,7 @@ void gnrc_pktbuf_release_error(gnrc_pktsnip_t *pkt, uint32_t err)
         else {
             pkt->users--;
         }
-        //DEBUG("pktbuf: report status code %" PRIu32 "\n", err);
+        DEBUG("pktbuf: report status code %" PRIu32 "\n", err);
         gnrc_neterr_report(pkt, err);
         pkt = tmp;
     }
