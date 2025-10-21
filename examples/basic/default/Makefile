@@ -34,7 +34,8 @@ QUIET ?= 1
 USEMODULE += shell
 USEMODULE += shell_cmds_default
 USEMODULE += ps
-USEMODULE += slipmux
+USEMODULE += slipmux2
+
 USEMODULE += stdio_slipmux
 
 #USEMODULE += nanocoap_resources

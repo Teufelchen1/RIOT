@@ -12,9 +12,9 @@ publish = false
 
 riot-module-lsm303agr = { path = "../../drivers/lsm303agr", optional = true }
 riot-module-shell-democommands = { path = "../../sys/shell/democommands", optional = true }
-riot-module-slipmux = { path = "../../drivers/slipmux", optional = true }
+riot-module-slipmux2 = { path = "../../drivers/slipmux2", optional = true }
 
 [features]
 # This feature is just there so that rust_riotmodules_standalone can use its
 # _all; see documentation there.
-_all = [ "riot-module-lsm303agr", "riot-module-shell-democommands", "riot-module-slipmux"]
+_all = [ "riot-module-lsm303agr", "riot-module-shell-democommands", "riot-module-slipmux2"]

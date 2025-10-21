@@ -1,1 +1,2 @@
 USEMODULE += rust_riotmodules
+USEMODULE += periph_uart

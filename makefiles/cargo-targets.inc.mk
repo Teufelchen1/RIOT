@@ -16,8 +16,8 @@ endif
 ifneq (,$(filter shell_democommands,$(USEMODULE)))
   CARGO_OPTIONS += --features rust_riotmodules/riot-module-shell-democommands
 endif
-ifneq (,$(filter slipmux,$(USEMODULE)))
-  CARGO_OPTIONS += --features rust_riotmodules/riot-module-slipmux
+ifneq (,$(filter slipmux2,$(USEMODULE)))
+  CARGO_OPTIONS += --features rust_riotmodules/riot-module-slipmux2
 endif
 
 # This is duplicating the compile-commands rule because unlike in the use case

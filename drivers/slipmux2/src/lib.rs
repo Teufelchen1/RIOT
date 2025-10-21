@@ -1,8 +1,9 @@
 #![no_std]
-use riot_wrappers::cstr::cstr;
+#![feature(type_alias_impl_trait)]
+//use riot_wrappers::cstr::cstr;
 use riot_wrappers::riot_sys;
 use riot_wrappers::{mutex::Mutex, println};
-
+/*
 use crate::riot_sys::inline::netdev;
 use crate::riot_sys::inline::netdev_register;
 use crate::riot_sys::inline::netdev_trigger_event_isr;
@@ -20,23 +21,32 @@ use riot_wrappers::riot_sys::{
     gnrc_netif_t, isrpipe_write_one, libc::c_void, netdev_driver_t, netdev_t, stdin_isrpipe,
     uart_init, uart_t, uart_write,
 };
-use riot_wrappers::thread;
+*/
+use riot_wrappers::riot_sys::libc::c_void;
+use riot_wrappers::riot_sys::{isrpipe_write_one, stdin_isrpipe};
+use riot_wrappers::uart::UartDevice;
+// use riot_wrappers::thread;
+use slipmux;
+use slipmux::Constants;
+use slipmux::Decoder;
+use slipmux::FrameHandler;
+use slipmux::FrameType;
 
-
-fn write_byte(uart: &UARTDevice, byte: u8) {
-    unsafe { uart_write(uart.dev, [byte].as_ptr(), 1) };
+fn write_byte(uart: &mut UartDevice, byte: u8) {
+    uart.write(&[byte]);
+    //unsafe { uart_write(uart.dev, [byte].as_ptr(), 1) };
 }
 
-fn write_escaping_bytes(uart: &UARTDevice, bytes: &[u8]) {
+fn write_escaping_bytes(uart: &mut UartDevice, bytes: &[u8]) {
     for byte in bytes {
         match *byte {
-            END => {
-                write_byte(uart, ESC);
-                write_byte(uart, ESC_END);
+            Constants::END => {
+                write_byte(uart, Constants::ESC);
+                write_byte(uart, Constants::ESC_END);
             }
-            ESC => {
-                write_byte(uart, ESC);
-                write_byte(uart, ESC_ESC);
+            Constants::ESC => {
+                write_byte(uart, Constants::ESC);
+                write_byte(uart, Constants::ESC_ESC);
             }
             _ => {
                 write_byte(uart, *byte);
@@ -45,25 +55,31 @@ fn write_escaping_bytes(uart: &UARTDevice, bytes: &[u8]) {
     }
 }
 
-#[derive(Debug)]
-pub struct UARTDevice {
-    dev: uart_t,
-}
+// #[derive(Debug)]
+// pub struct UARTDevice {
+//     dev: uart_t,
+// }
 
-impl UARTDevice {
-    pub fn new(dev: uart_t) -> Self {
-        UARTDevice { dev }
-    }
-}
+// impl UARTDevice {
+//     pub fn new(dev: uart_t) -> Self {
+//         UARTDevice { dev }
+//     }
+// }
 
-static SLIPUART: static_cell::StaticCell<UARTDevice> = static_cell::StaticCell::new();
+static SLIPUART: static_cell::StaticCell<UartDevice> = static_cell::StaticCell::new();
 static SLIPMUX: static_cell::StaticCell<Decoder> = static_cell::StaticCell::new();
 static HANDLER: static_cell::StaticCell<RiotSlipmuxFramehandler> = static_cell::StaticCell::new();
-static mut STDOUT: Option<&'static UARTDevice> = None;
+static mut STDOUT: Option<&'static mut UartDevice> = None;
+static mut HANDLER_PTR: Option<&'static mut RiotSlipmuxFramehandler> = None;
 static WRITE_SYNC: Mutex<()> = Mutex::new(());
 static mut COAPBUFFER: [u8; 2048] = [0; 2048];
 static mut NETBUFFER: [u8; 2048] = [0; 2048];
 
+fn uart_cb(byte: u8) {
+    println!("SLIPMUX received: {}", byte);
+}
+
+static mut CB: &'static fn(u8) = &(uart_cb as fn(u8));
 
 #[no_mangle]
 pub extern "C" fn auto_init_slipmux() {
@@ -83,25 +99,28 @@ extern "C" fn stdio_write(
     len: riot_sys::size_t,
 ) -> riot_sys::size_t {
     let _ = WRITE_SYNC.lock();
-    let uart = unsafe { STDOUT };
+    let mut uart = unsafe { &mut STDOUT };
     // unsafe: data is initialized per API
     let data = unsafe { core::slice::from_raw_parts(buffer as *const u8, len as _) };
-    if let Some(uart) = uart {
-        write_byte(uart, DIAGNOSTIC_START);
-        write_escaping_bytes(uart, data);
-        write_byte(uart, END);
+    if let Some(ref mut uart2) = uart {
+        write_byte(uart2, Constants::DIAGNOSTIC);
+        write_escaping_bytes(uart2, data);
+        write_byte(uart2, Constants::END);
         len
     } else {
         0
     }
 }
 
-extern "C" fn cb(arg: *mut c_void, byte: u8) {
-    let decoder = unsafe { &mut *(arg as *mut Decoder) };
-    decoder.decode(byte, HANDLER);
-
-    // todo!
-}
+// extern "C" fn cb(arg: *mut c_void, byte: u8) {
+//     let decoder = unsafe { &mut *(arg as *mut Decoder) };
+//     unsafe {
+//         if let Some(ref mut handler) = HANDLER_PTR {
+//             decoder.decode(byte, *handler);
+//         }
+//     }
+//     // todo!
+// }
 
 pub struct RiotSlipmuxFramehandler<'a> {
     /// Current offset from start of the buffer
@@ -116,11 +135,7 @@ pub struct RiotSlipmuxFramehandler<'a> {
 impl<'a> RiotSlipmuxFramehandler<'a> {
     /// Creates a new handler
     #[must_use]
-    pub const fn new(
-        diagnostic_buffer: &'a mut [u8],
-        configuration_buffer: &'a mut [u8],
-        packet_buffer: &'a mut [u8],
-    ) -> Self {
+    pub const fn new(configuration_buffer: &'a mut [u8], packet_buffer: &'a mut [u8]) -> Self {
         Self {
             index: 0,
             frame_type: None,
@@ -158,34 +173,46 @@ impl FrameHandler for RiotSlipmuxFramehandler<'_> {
         self.index += 1;
     }
 
-    fn end_frame(&mut self, _: Option<Error>) {
+    fn end_frame(&mut self, _: Option<slipmux::Error>) {
         self.frame_type = None;
         // fix me
         self.index = 0;
     }
 }
 
+static mut cb: fn(u8) = |b| {
+    while true {
+        println!("Got data\n");
+    }
+};
 
 fn init() -> Result<(), &'static str> {
-    let uart = SLIPUART.init(UARTDevice::new(0));
-    unsafe { STDOUT = Some(uart) };
-
-    let context: &mut _ = SLIPMUX.init(Decoder::new());
-    let handler: &mut _ = HANDLER.init(RiotSlipmuxFramehandler::new(
-        &mut COAPBUFFER,
-        &mut NETBUFFER,
-    ));
-
-    let _result = unsafe {
-        uart_init(
-            uart.dev,
-            115200,
-            Some(cb),
-            (context as *mut Decoder) as *mut c_void,
-        )
+    unsafe {
+        // let mut uart = UartDevice::new_with_static_cb(0, 115200, &mut CB)
+        //     .unwrap_or_else(|e| panic!("Error initializing UART: {e:?}"));
+        let mut uart = UartDevice::new_with_static_cb(0, 115200, &mut cb)
+            .unwrap_or_else(|e| panic!("Error initializing UART: {e:?}"));
+        let uart = SLIPUART.init(uart);
+        STDOUT = Some(uart);
     };
 
+    let context: &mut _ = SLIPMUX.init(Decoder::new());
+    unsafe {
+        let handler: &mut _ = HANDLER.init(RiotSlipmuxFramehandler::new(
+            &mut COAPBUFFER,
+            &mut NETBUFFER,
+        ));
+        HANDLER_PTR = Some(handler)
+    };
 
+    // let _result = unsafe {
+    //     uart_init(
+    //         uart.dev,
+    //         115200,
+    //         Some(cb),
+    //         (context as *mut Decoder) as *mut c_void,
+    //     )
+    // };
 
     Ok(())
 }

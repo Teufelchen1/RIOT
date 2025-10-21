@@ -90,7 +90,7 @@ ifneq (,$(filter stdio_semihosting,$(USEMODULE)))
   FEATURES_REQUIRED_ANY += cpu_core_cortexm|arch_riscv
 endif
 
-ifneq (,$(filter slipmux,$(USEMODULE)))
+ifneq (,$(filter slipmux2,$(USEMODULE)))
   FEATURES_REQUIRED_ANY += periph_uart|periph_lpuart
   PSEUDOMODULES += stdio_slipmux
 endif

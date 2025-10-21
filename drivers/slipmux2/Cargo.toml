@@ -11,6 +11,8 @@ license = "LGPL-2.1-only"
 publish = false
 
 [dependencies]
-riot-wrappers = { version = "*", features = ["with_msg_v2"] }
+riot-wrappers = { version = "0.9.2", features = ["with_msg_v2"] }
+riot-sys = { version = "0.7.14"}
 static_cell = "2.1.0"
 switch-hal = "*"
+slipmux = {version = "*", default-features = false}

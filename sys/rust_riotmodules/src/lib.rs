@@ -13,5 +13,5 @@ pub use riot_module_lsm303agr as lsm303agr;
 #[cfg(feature = "riot-module-shell-democommands")]
 pub use riot_module_shell_democommands as democommands;
 
-#[cfg(feature = "riot-module-slipmux")]
-pub use riot_module_slipmux as slipmux;
+#[cfg(feature = "riot-module-slipmux2")]
+pub use riot_module_slipmux2 as slipmux2;
