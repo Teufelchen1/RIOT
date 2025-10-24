@@ -18,6 +18,10 @@
 #include "tlsf-malloc.h"
 #endif
 
+#ifndef ISR_STACKSIZE
+#define ISR_STACKSIZE (256)
+#endif
+
 int encode_thread(
     nanocbor_encoder_t *enc,
     int pid,
@@ -56,10 +60,10 @@ int encode_thread(
     if (nanocbor_fmt_int(enc, stackfree) < 0) {
         return -EIO;
     }
-    if (nanocbor_fmt_int(enc, (int) base_addr) < 0) {
+    if (nanocbor_fmt_int(enc, (uint32_t) base_addr) < 0) {
         return -EIO;
     }
-    if (nanocbor_fmt_int(enc, (int) current_addr) < 0) {
+    if (nanocbor_fmt_int(enc, (uint32_t) current_addr) < 0) {
         return -EIO;
     }
     return 0;
