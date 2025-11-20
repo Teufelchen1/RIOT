@@ -49,6 +49,7 @@
 #include <stdint.h>
 #include "periph/pm.h"
 
+#include "net/gcoap.h"
 #include "modules.h"
 #include "xfa.h"
 
@@ -208,6 +209,26 @@ typedef struct {
  */
 void shell_run_once(const shell_command_t *commands, char *line_buf, int len);
 
+// static ssize_t _shell_handler(coap_pkt_t *pdu, uint8_t *buf, size_t len, coap_request_ctx_t *ctx);
+// {
+//     (void)ctx;
+//         return gcoap_response(pdu, buf, len, COAP_CODE_INTERNAL_SERVER_ERROR);
+// }
+
+// static const coap_resource_t _resources[] = {
+//     { "/shell", COAP_GET, _shell_handler, NULL },
+// };
+
+
+// static gcoap_listener_t _listener = {
+//     &_resources[0],
+//     ARRAY_SIZE(_resources),
+//     GCOAP_SOCKET_TYPE_UNDEF,
+//     NULL,
+//     NULL,
+//     NULL
+// };
+
 /**
  * @brief           Start a shell and restart it if it exits
  *
@@ -296,6 +317,8 @@ int shell_parse_file(const shell_command_t *commands,
 int shell_readline(char *buf, size_t size);
 
 #ifndef __cplusplus
+
+
 /**
  * @brief   Define shell command
  *

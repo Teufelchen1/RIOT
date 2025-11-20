@@ -48,6 +48,7 @@
 /* define shell command cross file array */
 XFA_INIT_CONST(shell_command_xfa_t, shell_commands_xfa_v2);
 
+
 #define ETX '\x03'  /** ASCII "End-of-Text", or Ctrl-C */
 #define EOT '\x04'  /** ASCII "End-of-Transmission", or Ctrl-D */
 #define BS  '\x08'  /** ASCII "Backspace" */

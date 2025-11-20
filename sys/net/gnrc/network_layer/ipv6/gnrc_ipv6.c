@@ -777,7 +777,7 @@ static void _receive(gnrc_pktsnip_t *pkt)
 
     if ((pkt->data == NULL) || (pkt->size < sizeof(ipv6_hdr_t)) ||
         !ipv6_hdr_is(pkt->data)) {
-        DEBUG("ipv6: Received packet was not IPv6, dropping packet\n");
+        DEBUG("ipv6: Received packet was not IPv6, dropping packet %p, %d\n", pkt->data, (pkt->size < sizeof(ipv6_hdr_t)));
         gnrc_pktbuf_release(pkt);
         return;
     }

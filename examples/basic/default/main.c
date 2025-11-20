@@ -30,6 +30,7 @@
 #include "net/gnrc/pktdump.h"
 #include "net/gnrc.h"
 
+extern void server_init(void);
 int main(void)
 {
 #ifdef MODULE_GNRC_PKTDUMP
@@ -39,7 +40,7 @@ int main(void)
 #endif
 
     (void) puts("Welcome to RIOT!");
-
+    server_init();
     char line_buf[SHELL_DEFAULT_BUFSIZE];
     shell_run(NULL, line_buf, SHELL_DEFAULT_BUFSIZE);
 

@@ -463,6 +463,10 @@ __attribute__((constructor)) static void startup(int argc, char **argv, char **e
 {
     _native_init_syscalls();
 
+    /* initialize stdio as early as possible */
+    //early_init();
+
+
     /* Passing argc, argv, and envp to init_fini handlers is a glibc
      * extension. If we are not running glibc, we parse /proc/self/cmdline
      * to populate argc and argv by hand */
