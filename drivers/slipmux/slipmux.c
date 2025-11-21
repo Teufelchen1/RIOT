@@ -22,7 +22,7 @@
 
 /* XXX: BE CAREFUL ABOUT USING OUTPUT WITH MODULE_SLIPMUX_STDIO IN SENDING
  * FUNCTIONALITY! MIGHT CAUSE DEADLOCK!!!1!! */
-#define ENABLE_DEBUG 0
+#define ENABLE_DEBUG 1
 #include "debug.h"
 
 #include "auto_init_utils.h"
@@ -39,7 +39,7 @@
 mutex_t slipmux_mutex = MUTEX_INIT;
 #endif
 
-static slipmux_t slipmuxdev;
+static slipmux_t slipmux_devs[SLIPMUX_DEV_NUM];
 
 void slipmux_rx_cb(void *arg, uint8_t byte)
 {
@@ -235,25 +235,27 @@ void slipmux_write_bytes(uart_t uart, const uint8_t *data, size_t len)
 
 void slipmux_init(void)
 {
-    slipmuxdev.config = slipmux_params[0];
+    DEBUG("SLIPMUX_DEV_NUM %d / %u\n", SLIPMUX_DEV_NUM, SLIPMUX_DEV_NUM);
+    for (unsigned i = 0; i < SLIPMUX_DEV_NUM; i++) {
+        slipmux_t *dev = &slipmux_devs[i];
+        dev->config = slipmux_params[i];
 
-    if (uart_init(slipmuxdev.config.uart, slipmuxdev.config.baudrate, slipmux_rx_cb,
-                  &slipmuxdev) != UART_OK) {
-        DEBUG("slipmux: error initializing UART %i with baudrate %" PRIu32 "\n",
-                  slipmuxdev.config.uart, slipmuxdev.config.baudrate);
-        return;
-    }
-    DEBUG("slipmux: initialized device %p on UART %i with baudrate %" PRIu32 "\n",
-        (void *)&slipmuxdev, slipmuxdev.config.uart, slipmuxdev.config.baudrate);
-    
+        if (uart_init(dev->config.uart, dev->config.baudrate, slipmux_rx_cb,
+                      dev) != UART_OK) {
+            DEBUG("slipmux: error initializing UART %i with baudrate %" PRIu32 "\n",
+                      dev->config.uart, dev->config.baudrate);
+            return;
+        }
+        DEBUG("slipmux: initialized device %p on UART %i with baudrate %" PRIu32 "\n",
+            (void *)dev, dev->config.uart, dev->config.baudrate);
+        
 #if IS_USED(MODULE_SLIPMUX_COAP)
-    extern void slipmux_coap_init(slipmux_t *dev);
-    slipmux_coap_init(&slipmuxdev);
+        slipmux_coap_init(dev, i);
 #endif
 #if IS_USED(MODULE_SLIPMUX_NET)
-    extern void slipmux_net_init(slipmux_t *dev);
-    slipmux_net_init(&slipmuxdev);
+        slipmux_net_init(dev, i);
 #endif
+    }
 }
 
 AUTO_INIT(slipmux_init, 9999);

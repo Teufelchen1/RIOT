@@ -16,7 +16,8 @@
 #endif
 /** @} */
 
-
+static char _slipdev_stacks[SLIPMUX_DEV_NUM][SLIPDEV_STACKSIZE];
+static gnrc_netif_t _netif[SLIPMUX_DEV_NUM];
 
 static void _poweron(slipmux_t *dev)
 {
@@ -197,19 +198,19 @@ static const netdev_driver_t slip_driver = {
 #endif
 };
 
-static char _slipdev_stack[SLIPDEV_STACKSIZE];
-
-static gnrc_netif_t _netif;
-
 void auto_init_slipmux_net(void) {
 }
-
-void slipmux_net_init(slipmux_t * dev) {   
+#define ENABLE_DEBUG 1
+#include "debug.h"
+void slipmux_net_init(slipmux_t * dev, unsigned index) {
+    DEBUG("slipmux net: init %d (%p)\n", index, dev);
     dev->netdev.driver = &slip_driver;
     crb_init(&dev->net_rb, dev->net_rx, sizeof(dev->net_rx));
-    netdev_register(&dev->netdev, NETDEV_SLIPDEV, 0);
+    netdev_register(&dev->netdev, NETDEV_SLIPDEV, index);
+    DEBUG("slipmux net registered netdev\n");
 
-    gnrc_netif_raw_create(&_netif, _slipdev_stack, SLIPDEV_STACKSIZE,
+    gnrc_netif_raw_create(&_netif[index], _slipdev_stacks[index], SLIPDEV_STACKSIZE,
                               SLIPDEV_PRIO, "slipdev",
                               &dev->netdev);
+    DEBUG("slipmux net created netif\n");
 }

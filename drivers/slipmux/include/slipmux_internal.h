@@ -27,9 +27,16 @@
 #include "periph/uart.h"
 #include "mutex.h"
 
+#include "slipmux_params.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * @brief   Number of slipmux devices, Parameters and array defined in slipmux_params.h
+ */
+#define SLIPMUX_DEV_NUM ARRAY_SIZE(slipmux_params)
 
 /**
  * @brief   ISR pipe to hand read bytes to stdin
@@ -157,6 +164,13 @@ static inline void slipmux_unlock(void)
        mutex_unlock(&slipmux_mutex);
     }
 }
+
+#if IS_USED(MODULE_SLIPMUX_COAP)
+void slipmux_coap_init(slipmux_t *dev, unsigned index);
+#endif
+#if IS_USED(MODULE_SLIPMUX_NET)
+void slipmux_net_init(slipmux_t *dev, unsigned index);
+#endif
 
 #ifdef __cplusplus
 }

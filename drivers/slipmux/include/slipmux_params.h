@@ -64,7 +64,7 @@ extern "C" {
  * `slipmux_stdio` is included.
  */
 static const slipmux_params_t slipmux_params[] = {
-    SLIPMUX_PARAMS
+    SLIPMUX_PARAMS, {.uart = UART_DEV(1), .baudrate = SLIPMUX_PARAM_BAUDRATE }
 };
 
 #ifdef __cplusplus

@@ -60,7 +60,8 @@ void *_slipmux_coap_server_thread(void *arg)
     return NULL;
 }
 
-void slipmux_coap_init(slipmux_t *dev) {
+void slipmux_coap_init(slipmux_t *dev, unsigned index) {
+    (void) index;
     crb_init(&dev->coap_rb, dev->coap_rx, sizeof(dev->coap_rx));
 
     dev->coap_server_pid = thread_create(coap_stack, sizeof(coap_stack), THREAD_PRIORITY_MAIN - 1,
