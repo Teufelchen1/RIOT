@@ -6,9 +6,6 @@
 #include "net/gnrc/netif/raw.h"
 #include "net/gnrc.h"
 
-#define ENABLE_DEBUG 1
-#include "debug.h"
-
 /**
  * @brief   Define stack parameters for the MAC layer thread
  * @{
@@ -29,7 +26,7 @@ static void _poweron(slipmux_t *dev)
     }
 
     dev->state = 0;
-    uart_init(dev->config.uart, dev->config.baudrate, _slipmux_rx_cb, dev);
+    uart_init(dev->config.uart, dev->config.baudrate, slipmux_rx_cb, dev);
 }
 
 static inline void _poweroff(slipmux_t *dev, uint8_t state)
@@ -74,7 +71,6 @@ static int _send(netdev_t *netdev, const iolist_t *iolist)
         return bytes;
     }
 
-    DEBUG("slipmux: sending iolist\n");
     slipmux_lock();
     for (const iolist_t *iol = iolist; iol; iol = iol->iol_next) {
         uint8_t *data = iol->iol_base;
@@ -83,7 +79,6 @@ static int _send(netdev_t *netdev, const iolist_t *iolist)
     }
     slipmux_write_byte(dev->config.uart, SLIPMUX_END);
     slipmux_unlock();
-    DEBUG("slipmux: done sending iolist\n");
     return bytes;
 }
 
@@ -96,17 +91,14 @@ static int _recv(netdev_t *netdev, void *buf, size_t len, void *info)
     if (buf == NULL) {
         if (len > 0) {
             /* remove data */
-            DEBUG("slipmux net: dropped %d bytes\n", len);
             crb_consume_chunk(&dev->net_rb, NULL, len);
         } else {
             /* the user was warned not to use a buffer size > `INT_MAX` ;-) */
             crb_get_chunk_size(&dev->net_rb, &res);
-            DEBUG("slipmux net: counted %d bytes\n", res);
         }
     }
     else {
         crb_consume_chunk(&dev->net_rb, buf, len);
-        DEBUG("slipmux net: consumed %d bytes\n", len);
         res = len;
     }
     return res;
@@ -116,11 +108,8 @@ static void _isr(netdev_t *netdev)
 {
     slipmux_t *dev =  container_of(netdev, slipmux_t, netdev);
 
-    DEBUG("slipmux: handling ISR event\n");
-
     size_t len;
     while (crb_get_chunk_size(&dev->net_rb, &len)) {
-        DEBUG("slipmux: event handler set, issuing RX_COMPLETE event\n");
         netdev->event_callback(netdev, NETDEV_EVENT_RX_COMPLETE);
     }
 }
@@ -213,11 +202,9 @@ static char _slipdev_stack[SLIPDEV_STACKSIZE];
 static gnrc_netif_t _netif;
 
 void auto_init_slipmux_net(void) {
-    DEBUG("auto_init_slipmux_net\n");
 }
 
 void slipmux_net_init(slipmux_t * dev) {   
-    DEBUG("slipmux_net_init\n");
     dev->netdev.driver = &slip_driver;
     crb_init(&dev->net_rb, dev->net_rx, sizeof(dev->net_rx));
     netdev_register(&dev->netdev, NETDEV_SLIPDEV, 0);

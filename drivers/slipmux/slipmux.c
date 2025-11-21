@@ -20,39 +20,28 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "log.h"
-//#include "slipdev.h"
-//#include "SLIPMUX_internal.h"
-#include "net/eui_provider.h"
-
 /* XXX: BE CAREFUL ABOUT USING OUTPUT WITH MODULE_SLIPMUX_STDIO IN SENDING
  * FUNCTIONALITY! MIGHT CAUSE DEADLOCK!!!1!! */
-#define ENABLE_DEBUG 1
+#define ENABLE_DEBUG 0
 #include "debug.h"
+
+#include "auto_init_utils.h"
+#include "chunked_ringbuffer.h"
+#include "isrpipe.h"
+#include "mutex.h"
+#include "periph/uart.h"
 
 #include "slipmux_internal.h"
 #include "slipmux_params.h"
-#include "auto_init_utils.h"
-#include "isrpipe.h"
-#include "mutex.h"
-#if IS_USED(MODULE_SLIPMUX_COAP)
-#include "checksum/crc16_ccitt.h"
-#include "net/nanocoap.h"
-#endif
-#include "stdio_uart.h"
 
 #if (IS_USED(MODULE_SLIPMUX_STDIO) || IS_USED(MODULE_SLIPMUX_COAP))
 /* For synchronization with stdio/config threads */
 mutex_t slipmux_mutex = MUTEX_INIT;
 #endif
 
-#include "periph/uart.h"
-#include "chunked_ringbuffer.h"
-
-
 static slipmux_t slipmuxdev;
 
-void _slipmux_rx_cb(void *arg, uint8_t byte)
+void slipmux_rx_cb(void *arg, uint8_t byte)
 {
     slipmux_t *dev = arg;
 
@@ -106,7 +95,7 @@ void _slipmux_rx_cb(void *arg, uint8_t byte)
 #if IS_USED(MODULE_SLIPMUX_COAP)
             /* discard frame if byte can't be added */
             if (!crb_add_byte(&dev->coap_rb, byte)) {
-                DEBUG("slipmux: rx buffer full, drop frame\n");
+                DEBUG("slipmux: coap rx buffer full, drop frame\n");
                 crb_end_chunk(&dev->coap_rb, false);
                 dev->state = SLIPMUX_STATE_NONE;
                 return;
@@ -127,7 +116,7 @@ void _slipmux_rx_cb(void *arg, uint8_t byte)
 #if IS_USED(MODULE_SLIPMUX_COAP)
         /* discard frame if byte can't be added */
         if (!crb_add_byte(&dev->coap_rb, byte)) {
-            DEBUG("slipmux: rx buffer full, drop frame\n");
+            DEBUG("slipmux: coap rx buffer full, drop frame\n");
             crb_end_chunk(&dev->coap_rb, false);
             dev->state = SLIPMUX_STATE_NONE;
             return;
@@ -150,7 +139,7 @@ void _slipmux_rx_cb(void *arg, uint8_t byte)
         }
         /* discard frame if byte can't be added */
         if (!crb_add_byte(&dev->net_rb, byte)) {
-            DEBUG("slipdev: rx buffer full, drop frame\n");
+            DEBUG("slipmux: net rx buffer full, drop frame\n");
             crb_end_chunk(&dev->net_rb, false);
             dev->state = SLIPMUX_STATE_NONE;
         }
@@ -168,7 +157,7 @@ void _slipmux_rx_cb(void *arg, uint8_t byte)
 #if IS_USED(MODULE_SLIPMUX_NET)
         /* discard frame if byte can't be added */
         if (!crb_add_byte(&dev->net_rb, byte)) {
-            DEBUG("slipdev: rx buffer full, drop frame\n");
+            DEBUG("slipmux: net rx buffer full, drop frame\n");
             crb_end_chunk(&dev->net_rb, false);
             dev->state = SLIPMUX_STATE_NONE;
             return;
@@ -195,12 +184,7 @@ void _slipmux_rx_cb(void *arg, uint8_t byte)
             return;
         }
 
-        if (
-            /* is it IPv4 packet? */
-            (byte >= 0x45 && byte <= 0x4f) ||
-            /* or is it IPv6 packet? */
-            (byte >= 0x60 && byte <= 0x6f)
-        ) {
+        if (SLIPMUX_NET_START(byte)) {
 #if IS_USED(MODULE_SLIPMUX_NET)
             /* try to create new ip frame */
             if (!crb_start_chunk(&dev->net_rb)) {
@@ -208,7 +192,7 @@ void _slipmux_rx_cb(void *arg, uint8_t byte)
                 return;
             }
             if (!crb_add_byte(&dev->net_rb, byte)) {
-                DEBUG("slipdev: rx buffer full, drop frame\n");
+                DEBUG("slipmux: net rx buffer full, drop frame\n");
                 crb_end_chunk(&dev->net_rb, false);
                 dev->state = SLIPMUX_STATE_NONE;
                 return;
@@ -253,14 +237,15 @@ void slipmux_init(void)
 {
     slipmuxdev.config = slipmux_params[0];
 
-    DEBUG("slipmux: initializing device %p on UART %i with baudrate %" PRIu32 "\n",
-          (void *)&slipmuxdev, slipmuxdev.config.uart, slipmuxdev.config.baudrate);
-    if (uart_init(slipmuxdev.config.uart, slipmuxdev.config.baudrate, _slipmux_rx_cb,
+    if (uart_init(slipmuxdev.config.uart, slipmuxdev.config.baudrate, slipmux_rx_cb,
                   &slipmuxdev) != UART_OK) {
-        LOG_ERROR("slipmux: error initializing UART %i with baudrate %" PRIu32 "\n",
+        DEBUG("slipmux: error initializing UART %i with baudrate %" PRIu32 "\n",
                   slipmuxdev.config.uart, slipmuxdev.config.baudrate);
         return;
     }
+    DEBUG("slipmux: initialized device %p on UART %i with baudrate %" PRIu32 "\n",
+        (void *)&slipmuxdev, slipmuxdev.config.uart, slipmuxdev.config.baudrate);
+    
 #if IS_USED(MODULE_SLIPMUX_COAP)
     extern void slipmux_coap_init(slipmux_t *dev);
     slipmux_coap_init(&slipmuxdev);

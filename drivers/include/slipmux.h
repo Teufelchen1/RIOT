@@ -1,5 +1,7 @@
 /*
  * Copyright (C) 2015-17 Freie Universität Berlin
+ * Copyright (C) 2025 HAW Hamburg
+ * Copyright (C) 2025 Bennet Hattesen
  *
  * This file is subject to the terms and conditions of the GNU Lesser
  * General Public License v2.1. See the file LICENSE in the top level
@@ -7,59 +9,6 @@
  */
 
 #pragma once
-
-/**
- * @defgroup    drivers_slipdev_stdio   STDIO via SLIP
- * @ingroup     sys_stdio
- * @brief       Standard input/output backend multiplexed via SLIP
- * @see         [draft-bormann-t2trg-slipmux-03](https://datatracker.ietf.org/doc/html/draft-bormann-t2trg-slipmux-03)
- *
- * This extension is part of the [Slipmux draft](https://datatracker.ietf.org/doc/html/draft-bormann-t2trg-slipmux-03).
- * @warning This module is under development for optimizations and module names might change!
- *
- * This will multiplex STDIO via the Serial Line Internet Protocol.
- * The shell can be accessed via the `sliptty` tool.
- *
- * To enable this stdio implementation, select
- *
- *     USEMODULE += slipdev_stdio
- *
- * @see         drivers_slipdev
- */
-
-/**
- * @defgroup    drivers_slipdev_configuration CoAP via SLIP
- * @ingroup     drivers_slipdev
- * @brief       Exchange CoAP requests and responses via SLIP
- * @see         [draft-bormann-t2trg-slipmux-03](https://datatracker.ietf.org/doc/html/draft-bormann-t2trg-slipmux-03)
- *
- * This extension is part of the [Slipmux draft](https://datatracker.ietf.org/doc/html/draft-bormann-t2trg-slipmux-03).
- * @warning This module is under development for optimizations and module names might change!
- *
- * This will multiplex CoAP messages via the Serial Line Internet Protocol.
- * It spawns an extra thread as a CoAP server. The incoming requests are handled with `nanocoap`
- * according to any `NANOCOAP_RESOURCE`s present in the binary. See @ref net_nanocoap for more.
- *
- * To enable this implementation, select
- *
- *     USEMODULE += slipdev_config
- *
- * @see         drivers_slipdev
- */
-
-/**
- * @defgroup    drivers_slipdev SLIP network device
- * @ingroup     drivers_netdev
- * @brief       SLIP network device over @ref drivers_periph_uart
- * @see         [RFC 1055](https://datatracker.ietf.org/doc/html/rfc1055)
- *
- * @{
- *
- * @file
- * @brief   SLIP device definitions
- *
- * @author  Martine Lenders <m.lenders@fu-berlin.de>
- */
 
 #include <stdint.h>
 
@@ -69,17 +18,101 @@
 #include "chunked_ringbuffer.h"
 #include "sched.h"
 
+/**
+ * @defgroup    drivers_slipmux Serial Line Internet Protocol Multiplexing
+ * @brief       Provides de-/encoding for SLIPMUX
+ * @see         [draft-bormann-t2trg-slipmux-03](https://datatracker.ietf.org/doc/html/draft-bormann-t2trg-slipmux-03)
+ *
+ * This is the base module, see @ref drivers_slipmux_net, @ref drivers_slipmux_coap and
+ * @ref drivers_slipmux_stdio for more information.
+ *
+ * @{
+ *
+ * @file
+ * @brief   SLIPMUX definitions
+ *
+ * @author  Martine Lenders <m.lenders@fu-berlin.de>
+ */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /**
- * @defgroup drivers_slipdev_config     SLIP Network driver compile configuration
- * @ingroup config_drivers_netdev
+ * @defgroup    drivers_slipmux_stdio   STDIO via SLIPMUX
+ * @ingroup     sys_stdio
+ * @brief       Standard input/output backend multiplexed via SLIPMUX
+ * @see         [draft-bormann-t2trg-slipmux-03](https://datatracker.ietf.org/doc/html/draft-bormann-t2trg-slipmux-03)
+ *
+ * This extension is part of the [Slipmux draft](https://datatracker.ietf.org/doc/html/draft-bormann-t2trg-slipmux-03).
+ * @warning This module is under development for optimizations and module names might change!
+ *
+ * This multiplexes STDIO together with the Serial Line Internet Protocol via SLIPMUX.
+ * The shell can be accessed via the `sliptty` tool.
+ *
+ * To enable this stdio implementation, select
+ *
+ *     USEMODULE += slipmux_stdio
+ *
+ * @see         drivers_slipmux
+ */
+
+/**
+ * @defgroup    drivers_slipmux_coap CoAP via SLIP
+ * @ingroup     drivers_slipmux
+ * @brief       Exchange CoAP requests and responses via SLIPMUX
+ * @see         [draft-bormann-t2trg-slipmux-03](https://datatracker.ietf.org/doc/html/draft-bormann-t2trg-slipmux-03)
+ *
+ * This extension is part of the [Slipmux draft](https://datatracker.ietf.org/doc/html/draft-bormann-t2trg-slipmux-03).
+ * @warning This module is under development for optimizations and module names might change!
+ *
+ * This will multiplex CoAP messages together with the Serial Line Internet Protocol via SLIPMUX.
+ * It spawns an extra thread as a CoAP server. The incoming requests are handled with `nanocoap`
+ * according to any `NANOCOAP_RESOURCE`s present in the binary. See @ref net_nanocoap for more.
+ *
+ * To enable this implementation, select
+ *
+ *     USEMODULE += slipmux_coap
+ *
+ * @see         drivers_slipmux
  * @{
  */
+
 /**
  * @brief   UART buffer size used for TX and RX buffers
+ *
+ * Reduce this value if your expected traffic does not include full IPv6 MTU
+ * sized packets.
+ */
+#ifndef CONFIG_SLIPMUX_COAP_BUFSIZE
+#define CONFIG_SLIPMUX_COAP_BUFSIZE (512U)
+#endif
+/** @} */
+
+
+/**
+ * @defgroup    drivers_slipmux_net SLIP network device
+ * @ingroup     drivers_netdev
+ * @brief       SLIP network device over @ref drivers_periph_uart
+ * @see         [RFC 1055](https://datatracker.ietf.org/doc/html/rfc1055)
+ *
+ * This extension is part of the [Slipmux draft](https://datatracker.ietf.org/doc/html/draft-bormann-t2trg-slipmux-03).
+ * @warning This module is under development for optimizations and module names might change!
+ *
+ * This will offer the traditional Serial Line Internet Protocol as a network interface
+ * using GNRC.
+ *
+ * To enable this implementation, select
+ *
+ *     USEMODULE += slipmux_net
+ *
+ * @see         drivers_slipmux
+ * 
+ * @{
+ */
+
+/**
+ * @brief   Buffer size used for TX and RX buffers
  *
  * Reduce this value if your expected traffic does not include full IPv6 MTU
  * sized packets.
@@ -90,17 +123,6 @@ extern "C" {
 
 #ifndef CONFIG_SLIPMUX_NET_BUFSIZE
 #define CONFIG_SLIPMUX_NET_BUFSIZE (2048U)
-#endif
-/** @} */
-
-/**
- * @brief   UART buffer size used for TX and RX buffers
- *
- * Reduce this value if your expected traffic does not include full IPv6 MTU
- * sized packets.
- */
-#ifndef CONFIG_SLIPMUX_COAP_BUFSIZE
-#define CONFIG_SLIPMUX_COAP_BUFSIZE (512U)
 #endif
 /** @} */
 
@@ -140,6 +162,8 @@ typedef struct {
      */
     uint8_t state;
 } slipmux_t;
+
+
 
 #ifdef __cplusplus
 }

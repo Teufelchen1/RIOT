@@ -9,14 +9,15 @@
 #pragma once
 
 /**
- * @ingroup drivers_slipdev
+ * @ingroup drivers_slipmux
  * @{
  *
  * @file
  * @internal
- * @brief   Internal SLIP device definitions
+ * @brief   Internal SLIPMUX device definitions
  *
  * @author  Martine Lenders <m.lenders@fu-berlin.de>
+ * @author  Bennet Hattesen
  */
 
 #include <stddef.h>
@@ -36,35 +37,61 @@ extern "C" {
 extern isrpipe_t slipmux_stdio_isrpipe;
 
 /**
- * @brief   Mutex to synchronize write operations to the UART between stdio
- *          sub-module and normal SLIP.
+ * @brief   Mutex to synchronize write operations to the UART between stdio, 
+ *          coap and net / SLIP sub-modules.
  */
 extern mutex_t slipmux_mutex;
 
 /**
- * @name    SLIP(MUX) marker bytes
+ * @name    SLIP marker bytes
  * @see     [RFC 1055](https://tools.ietf.org/html/rfc1055)
  * @{
  */
+/**
+ * @brief   Ends a frame
+ */
 #define SLIPMUX_END         (0xc0U)
+/**
+ * @brief   Initiates escape sequence
+ */
 #define SLIPMUX_ESC         (0xdbU)
+/**
+ * @brief   Ends escape sequence, next byte is END
+ */
 #define SLIPMUX_END_ESC     (0xdcU)
+/**
+ * @brief   Ends escape sequence, next byte is ESC
+ */
 #define SLIPMUX_ESC_ESC     (0xddU)
+/** @} */
 
 /**
- * @brief   Marker byte for beginning of stdio
- * @see     taken from diagnostic transfer from
- *          [SLIPMUX](https://tools.ietf.org/html/draft-bormann-t2trg-slipmux-03#section-4)
+ * @name    SLIPMUX marker bytes
+ * @see     [SLIPMUX](https://tools.ietf.org/html/draft-bormann-t2trg-slipmux-03#section-4)
+ * @{
+ */
+/**
+ * @brief   Starts a diagnostic frame
  */
 #define SLIPMUX_STDIO_START (0x0aU)
-
 /**
- * @brief   Marker byte for beginning of configuration/CoAP
- * @see     taken from configuration from
- *          [SLIPMUX](https://tools.ietf.org/html/draft-bormann-t2trg-slipmux-03#section-5)
+ * @brief   Starts a configuration frame
  */
 #define SLIPMUX_COAP_START (0xa9U)
+/**
+ * @brief   Starts a IP packet frame
+ */
+#define SLIPMUX_NET_START(byte) (\
+            /* is it IPv4 packet? */ \
+            (byte >= 0x45 && byte <= 0x4f) || \
+            /* or is it IPv6 packet? */ \
+            (byte >= 0x60 && byte <= 0x6f) \
+        )
+/** @} */
 
+/**
+ * @brief   Decoder internal state
+ */
 enum {
     /* Device is in no mode (currently did not receiving any data frame) */
     SLIPMUX_STATE_NONE = 0,
@@ -86,7 +113,10 @@ enum {
     SLIPMUX_STATE_SLEEP,
 };
 
-void _slipmux_rx_cb(void *arg, uint8_t byte);
+/**
+ * @brief   Callback for the UART on receiving data
+ */
+void slipmux_rx_cb(void *arg, uint8_t byte);
 
 /**
  * @brief   Writes one byte to UART
@@ -108,6 +138,9 @@ static inline void slipmux_write_byte(uart_t uart, uint8_t byte)
  */
 void slipmux_write_bytes(uart_t uart, const uint8_t *data, size_t len);
 
+/**
+ * @brief   Acquire exclusive access for writing
+ */
 static inline void slipmux_lock(void)
 {
     if (IS_USED(MODULE_SLIPMUX_STDIO) || IS_USED(MODULE_SLIPMUX_COAP)) {
@@ -115,6 +148,9 @@ static inline void slipmux_lock(void)
     }
 }
 
+/**
+ * @brief   Release the exclusive access
+ */
 static inline void slipmux_unlock(void)
 {
     if (IS_USED(MODULE_SLIPMUX_STDIO) || IS_USED(MODULE_SLIPMUX_COAP)) {

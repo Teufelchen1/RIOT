@@ -17,7 +17,6 @@
 #include "isrpipe.h"
 #include "periph/uart.h"
 
-//#include "slipdev.h"
 #include "slipmux_internal.h"
 #include "slipmux_params.h"
 
