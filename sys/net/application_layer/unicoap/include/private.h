@@ -169,6 +169,9 @@ int unicoap_init_rfc7252_common(event_queue_t* queue);
 /** @brief DeiInitializes the common RFC 7252 driver on the given @p queue */
 int unicoap_deinit_rfc7252_common(event_queue_t* queue);
 
+/** @brief Initializes the CoAP over Slipmux driver on the given @p queue */
+int unicoap_init_slipmux(event_queue_t* queue);
+
 /* MARK: unicoap_driver_extension_point */
 /** @} */
 

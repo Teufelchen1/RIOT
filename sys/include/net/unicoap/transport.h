@@ -29,6 +29,10 @@
 #  include "net/sock/dtls.h"
 #endif
 
+#if IS_USED(MODULE_UNICOAP_DRIVER_SLIPMUX) || defined(DOXYGEN)
+#  include "slipmux.h"
+#endif
+
 /* MARK: unicoap_driver_extension_point */
 
 #include "net/unicoap/message.h"
@@ -137,6 +141,9 @@ typedef enum {
     /** @brief CoAP over DTLS over UDP endpoint */
     UNICOAP_PROTO_DTLS = 2 << 1,
 
+    /** @brief CoAP over Slipmux endpoint */
+    UNICOAP_PROTO_SLIPMUX = 4 << 1,
+
     /* MARK: unicoap_driver_extension_point */
 } __attribute__((__packed__)) unicoap_proto_t;
 
@@ -201,7 +208,9 @@ typedef struct {
         /** @brief RIOT sock DTLS endpoint */
         sock_udp_ep_t dtls_ep;
 #endif /* IS_USED(MODULE_UNICOAP_SOCK_SUPPORT) || defined(DOXYGEN) */
-
+#if IS_USED(MODULE_UNICOAP_DRIVER_SLIPMUX) || defined(DOXYGEN)
+        slipmux_t *slipmux_ep;
+#endif /* IS_USED(MODULE_UNICOAP_DRIVER_SLIPMUX) || defined(DOXYGEN) */
         /* MARK: unicoap_driver_extension_point */
     };
 } unicoap_endpoint_t;

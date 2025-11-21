@@ -13,6 +13,7 @@
 #include <stdint.h>
 
 #include "cib.h"
+#include "event.h"
 #include "net/netdev.h"
 #include "periph/uart.h"
 #include "chunked_ringbuffer.h"
@@ -155,6 +156,7 @@ typedef struct {
     chunk_ringbuf_t coap_rb;                /**< Ringbuffer stores received configuration frames */
     uint8_t coap_rx[CONFIG_SLIPMUX_COAP_BUFSIZE];/**< memory used by RX buffer */
     kernel_pid_t coap_server_pid;           /**< The PID of the CoAP server */
+    event_t event;
 #endif
     /**
      * @brief   Device state
@@ -163,7 +165,10 @@ typedef struct {
     uint8_t state;
 } slipmux_t;
 
-
+void slipmux_coap_set_event_queue(event_queue_t *q);
+void unicoap_slipmux_recv_handler(event_t * event);
+int slipmux_coap_recv(uint8_t *buf, size_t buf_size, slipmux_t *dev);
+void slipmux_coap_send(uint8_t *buf, size_t len, const slipmux_t *dev);
 
 #ifdef __cplusplus
 }

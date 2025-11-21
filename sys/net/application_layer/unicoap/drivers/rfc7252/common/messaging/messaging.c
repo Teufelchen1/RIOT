@@ -327,6 +327,13 @@ static int _sendv(iolist_t* list, const unicoap_endpoint_t* remote, const unicoa
     }
 #endif
 
+#if IS_USED(MODULE_UNICOAP_DRIVER_SLIPMUX)
+    case UNICOAP_PROTO_SLIPMUX: {
+        extern int unicoap_transport_sendv_slipmux(iolist_t * iolist, const unicoap_endpoint_t* remote);
+        return unicoap_transport_sendv_slipmux(list, remote);
+    }
+#endif
+
     default:
         MESSAGING_7252_DEBUG("unsupported protocol number\n");
         unicoap_assist_emit_diagnostic_missing_driver(remote->proto);

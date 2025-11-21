@@ -88,7 +88,8 @@ void slipmux_rx_cb(void *arg, uint8_t byte)
             dev->state = SLIPMUX_STATE_NONE;
 #if IS_USED(MODULE_SLIPMUX_COAP)
             crb_end_chunk(&dev->coap_rb, true);
-            thread_flags_set(thread_get(dev->coap_server_pid), 1);
+            extern void _slipmux_coap_dispatch_recv(event_t *);
+            _slipmux_coap_dispatch_recv(&dev->event);
 #endif
             break;
         default:
