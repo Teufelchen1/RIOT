@@ -506,6 +506,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
 
 [[package]]
+name = "riot-module-demouart"
+version = "0.1.0"
+dependencies = [
+ "riot-wrappers",
+]
+
+[[package]]
 name = "riot-module-lsm303agr"
 version = "0.1.0"
 dependencies = [
@@ -564,6 +571,7 @@ dependencies = [
 name = "rust_riotmodules"
 version = "0.1.0"
 dependencies = [
+ "riot-module-demouart",
  "riot-module-lsm303agr",
  "riot-module-shell-democommands",
 ]

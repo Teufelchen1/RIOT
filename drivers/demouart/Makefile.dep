@@ -1,0 +1,3 @@
+USEMODULE += rust_riotmodules
+USEMODULE += periph_uart
+USEMODULE += auto_init

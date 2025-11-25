@@ -13,6 +13,7 @@ STDIO_MODULES = \
   stdio_tinyusb_cdc_acm \
   stdio_usb_serial_jtag \
   stdio_fb \
+  stdio_demouart \
   #
 
 STDIO_LEGACY_MODULES = \
@@ -20,13 +21,18 @@ STDIO_LEGACY_MODULES = \
   stdio_ethos \
   #
 
+ifneq (,$(filter demouart,$(USEMODULE)))
+  FEATURES_REQUIRED_ANY += periph_uart|periph_lpuart
+  PSEUDOMODULES += stdio_demouart
+endif
+
 # select stdio_uart if no other stdio module is slected
 ifeq (,$(filter $(STDIO_MODULES),$(USEMODULE)))
   USEMODULE += stdio_uart
 endif
 
 ifeq (,$(filter $(STDIO_LEGACY_MODULES),$(USEMODULE)))
-  USEMODULE += stdio
+  # USEMODULE += stdio
 endif
 
 ifneq (,$(filter stdin,$(USEMODULE)))
@@ -34,7 +40,7 @@ ifneq (,$(filter stdin,$(USEMODULE)))
 endif
 
 ifneq (1, $(words $(sort $(filter $(STDIO_MODULES),$(USEMODULE)))))
-  USEMODULE += stdio_dispatch
+  # USEMODULE += stdio_dispatch
 endif
 
 ifneq (,$(filter stdio_cdc_acm,$(USEMODULE)))

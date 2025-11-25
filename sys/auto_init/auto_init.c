@@ -349,6 +349,14 @@ extern void psa_crypto_init(void);
 AUTO_INIT(psa_crypto_init,
           AUTO_INIT_PRIO_MOD_PSA_CRYPTO);
 #endif
+#if IS_USED(MODULE_DEMOUART)
+extern void auto_init_demouart(void);
+AUTO_INIT(auto_init_demouart,
+          AUTO_INIT_PRIO_MOD_DEMOUART);
+#endif
+
+
+
 
 void auto_init(void)
 {
