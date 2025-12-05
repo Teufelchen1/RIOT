@@ -114,6 +114,11 @@ void gnrc_netif_init_devs(void)
         auto_init_slipdev();
     }
 
+    if (IS_USED(MODULE_SLIPMUX_NET)) {
+        extern void auto_init_slipmux_net(void);
+        auto_init_slipmux_net();
+    }
+
     if (IS_USED(MODULE_CC2538_RF)) {
         extern void auto_init_cc2538_rf(void);
         auto_init_cc2538_rf();
