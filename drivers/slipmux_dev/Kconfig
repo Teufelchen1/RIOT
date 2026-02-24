@@ -1,0 +1,25 @@
+/*
+ * SPDX-FileCopyrightText: 2025 HAW Hamburg
+ * SPDX-License-Identifier: LGPL-2.1-only
+ */
+
+menu "SLIPMUX driver"
+    depends on USEMODULE_SLIPMUX_DEV
+
+    config SLIPMUX_COAP_BUFSIZE
+        depends on USEMODULE_SLIPMUX_COAP
+        int "CoAP TX/RX buffer size, in bytes"
+        range 0 9999999
+        default 512
+        help
+            Size of the CoAP request / response buffer
+
+    config SLIPMUX_NET_BUFSIZE
+        depends on USEMODULE_SLIPMUX_NET
+        int "IP packet TX/RX buffer size, in bytes"
+        range 0 9999999
+        default 2048
+        help
+            Size of the IP network interface TX/RX buffer. Reduce this value if your expected traffic does not include full IPv6 MTU sized packets.
+
+endmenu # SLIPMUX driver

@@ -268,6 +268,12 @@ extern "C" {
  */
 #define AUTO_INIT_PRIO_MOD_GNRC_NETIF                   1360
 #endif
+#ifndef AUTO_INIT_PRIO_MOD_SLIPMUX_DEV
+/**
+ * @brief   SLIPMUX device priority
+ */
+#define AUTO_INIT_PRIO_MOD_SLIPMUX_DEV                  1362
+#endif
 #ifndef AUTO_INIT_PRIO_MOD_GNRC_UHCPC
 /**
  * @brief   UHCPC priority
