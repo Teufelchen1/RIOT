@@ -1,0 +1,3 @@
+USEMODULE_INCLUDES_slipdev_base := $(LAST_MAKEFILEDIR)/include \
+                                   $(LAST_MAKEFILEDIR)/../slipdev/include
+USEMODULE_INCLUDES += $(USEMODULE_INCLUDES_slipdev_base)

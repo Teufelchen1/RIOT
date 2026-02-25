@@ -246,8 +246,14 @@ ifneq (,$(filter si70%,$(USEMODULE)))
   USEMODULE += si70xx
 endif
 
-ifneq (,$(filter slipdev_%,$(USEMODULE)))
+# slipdev_stdio and slipdev_config can work without the full network slipdev,
+# they only need slipdev_base. Other slipdev_% submodules still need slipdev.
+ifneq (,$(filter-out slipdev_stdio slipdev_config slipdev_base, $(filter slipdev_%,$(USEMODULE))))
   USEMODULE += slipdev
+endif
+
+ifneq (,$(filter slipdev_stdio slipdev_config,$(USEMODULE)))
+  USEMODULE += slipdev_base
 endif
 
 ifneq (,$(filter stmpe811_%,$(USEMODULE)))

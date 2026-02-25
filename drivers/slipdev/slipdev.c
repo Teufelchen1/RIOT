@@ -32,17 +32,11 @@
 #include "debug.h"
 
 #include "isrpipe.h"
-#include "mutex.h"
 #if IS_USED(MODULE_SLIPDEV_CONFIG)
 #include "checksum/crc16_ccitt.h"
 #include "net/nanocoap.h"
 #endif
 #include "stdio_uart.h"
-
-#if (IS_USED(MODULE_SLIPDEV_STDIO) || IS_USED(MODULE_SLIPDEV_CONFIG))
-/* For synchronization with stdio/config threads */
-mutex_t slipdev_mutex = MUTEX_INIT;
-#endif
 
 #if IS_USED(MODULE_SLIPDEV_CONFIG)
 /* The special init is the result of normal fcs init combined with slipmux config start (0xa9) */
@@ -326,26 +320,6 @@ static int _init(netdev_t *netdev)
     netdev->event_callback(netdev, NETDEV_EVENT_LINK_UP);
 
     return 0;
-}
-
-void slipdev_write_bytes(uart_t uart, const uint8_t *data, size_t len)
-{
-    for (unsigned j = 0; j < len; j++, data++) {
-        switch (*data) {
-        case SLIPDEV_END:
-            /* escaping END byte*/
-            slipdev_write_byte(uart, SLIPDEV_ESC);
-            slipdev_write_byte(uart, SLIPDEV_END_ESC);
-            break;
-        case SLIPDEV_ESC:
-            /* escaping ESC byte*/
-            slipdev_write_byte(uart, SLIPDEV_ESC);
-            slipdev_write_byte(uart, SLIPDEV_ESC_ESC);
-            break;
-        default:
-            slipdev_write_byte(uart, *data);
-        }
-    }
 }
 
 static int _check_state(slipdev_t *dev)
