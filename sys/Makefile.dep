@@ -269,6 +269,10 @@ ifneq (,$(filter shell_cmds,$(USEMODULE)))
   USEMODULE += shell
 endif
 
+ifneq (,$(filter jelly,$(USEMODULE)))
+  USEMODULE += stdio_slipdev
+endif
+
 # Include all stdio_% dependencies after all USEMODULE += stdio_%
 include $(RIOTBASE)/makefiles/stdio.inc.mk
 
