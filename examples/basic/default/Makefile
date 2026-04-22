@@ -28,6 +28,7 @@ DEVELHELP ?= 1
 QUIET ?= 1
 
 # Modules to include:
+USEMODULE += jelly
 USEMODULE += shell
 USEMODULE += shell_cmds_default
 USEMODULE += ps

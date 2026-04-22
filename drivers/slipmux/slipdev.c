@@ -301,7 +301,7 @@ void slipdev_setup(slipdev_t *dev, const slipdev_params_t *params, uint8_t index
 {
     /* set device descriptor fields */
     dev->config = *params;
-    dev->state = SLIPDEV_STATE_NONE;
+    dev->state = SLIPDEV_STATE_UNKNOWN;
 
     /* we only support one coap server at the moment */
     if ((index == 0) && IS_USED(MODULE_SLIPDEV_CONFIG)) {
