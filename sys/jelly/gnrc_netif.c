@@ -16,17 +16,19 @@ static int _netif_read(netif_t *iface, nanocbor_encoder_t *enc)
     assert(nanocbor_fmt_array_indefinite(enc) > 0);
 
     char name[CONFIG_NETIF_NAMELENMAX];
+
     netif_get_name(iface, name);
+
     /* 20 as name, self choosen */
     assert(nanocbor_fmt_tag(enc, 20) > 0);
     /* safe: netif_get_name promises to be null terminated */
     assert(nanocbor_put_tstr(enc, name) == NANOCBOR_OK);
 
     uint8_t hwaddr[GNRC_NETIF_L2ADDR_MAXLEN];
-    res = netif_get_opt(iface, NETOPT_ADDRESS, 0, hwaddr, sizeof(hwaddr));
+    res = netif_get_opt(iface, NETOPT_ADDRESS_LONG, 0, hwaddr, sizeof(hwaddr));
     if (res >= 0) {
         /* 48 is set by iana as IEEE MAC, RFC9542 */
-        assert(nanocbor_fmt_tag(enc, 48) == NANOCBOR_OK);
+        assert(nanocbor_fmt_tag(enc, 48) > 0);
         assert(nanocbor_put_bstr(enc, hwaddr, sizeof(hwaddr)) == NANOCBOR_OK);
     }
 //     res = netif_get_opt(iface, NETOPT_CHANNEL, 0, &u16, sizeof(u16));
@@ -241,11 +243,17 @@ static ssize_t _coap_internal_server_error(coap_pkt_t *pkt, uint8_t *buf, size_t
                     COAP_FORMAT_NONE, NULL, 0);
 }
 
+static ssize_t _coap_not_found(coap_pkt_t *pkt, uint8_t *buf, size_t len)
+{
+    return coap_reply_simple(pkt, COAP_CODE_404, buf, len,
+                    COAP_FORMAT_NONE, NULL, 0);
+}
+
 ssize_t _gnrc_netif_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len,
                                   coap_request_ctx_t *context)
 {
     (void) context;
-    uint8_t buffer[200];
+    uint8_t buffer[500];
 
     nanocbor_encoder_t enc;
     nanocbor_encoder_init(&enc, buffer, sizeof(buffer));
@@ -262,7 +270,7 @@ ssize_t _gnrc_netif_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len,
         if(nanocbor_enter_array(&decoder, &array) == NANOCBOR_OK) {
             /* Start response array, we don't know how many interfaces it will contain */
             if (nanocbor_fmt_array_indefinite(&enc) <= 0) {
-                return _coap_internal_server_error(pkt, buf, len);
+                return _coap_bad_request(pkt, buf, len);
             }
 
             char *name_buf = NULL;
@@ -292,27 +300,66 @@ ssize_t _gnrc_netif_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len,
     case COAP_PUT:
     case COAP_POST:
         if(nanocbor_enter_array(&decoder, &array) == NANOCBOR_OK) {
-            uint8_t id = 0;
-            if (nanocbor_get_uint8(&array, &id) < 0) {
-                return _coap_unprocessable_entity(pkt, buf, len);
+            uint32_t tag = 0;
+
+            if (nanocbor_get_tag(&array, &tag) != NANOCBOR_OK) {
+                return _coap_bad_request(pkt, buf, len);
             }
-            uint8_t data = 0;
-            if (nanocbor_get_uint8(&array, &data) < 0) {
-                return _coap_unprocessable_entity(pkt, buf, len);
+
+            if (tag != 20) {
+                return _coap_bad_request(pkt, buf, len);
             }
-            // int ret = _reg_write(id, data);
-            // if (ret < 0) {
-                // int coap_code = _convert_errorno_to_coap_code(ret);
-                // return coap_reply_simple(pkt, coap_code, buf, len,
-                //     COAP_FORMAT_NONE, NULL, 0);
-            // }
+
+            char *name_buf = NULL;
+            size_t name_len = 0;
+
+            if (nanocbor_get_tstr(&array, (const uint8_t **) &name_buf, &name_len) < 0) {
+                return _coap_bad_request(pkt, buf, len);
+            }
+            netif_t *iface = netif_get_by_name_buffer(name_buf, name_len);
+
+            if (iface == NULL) {
+                return _coap_not_found(pkt, buf, len);
+            }
+
+            
+            if (nanocbor_get_tag(&array, &tag) != NANOCBOR_OK) {
+                return _coap_bad_request(pkt, buf, len);
+            }
+            if (tag == 54) {
+                nanocbor_value_t inner_array;
+                if(nanocbor_enter_array(&array, &inner_array) == NANOCBOR_OK) {
+                    uint8_t *ipv6_buffer;
+                    size_t ipv6_buffer_len;
+                    //printf("Next is: %d\n", nanocbor_get_type(&array))
+                    if (nanocbor_get_bstr(&inner_array, (const uint8_t **) &ipv6_buffer, &ipv6_buffer_len) != NANOCBOR_OK) {
+                        //printf("Can not get ipaddr\n");
+                        return _coap_unprocessable_entity(pkt, buf, len);
+                    }
+                    if (ipv6_buffer_len != 16) {
+                        return _coap_bad_request(pkt, buf, len);
+                    }
+
+                    uint8_t prefix = 128;
+                    if (nanocbor_get_uint8(&inner_array, &prefix) < 0) {
+                        return _coap_bad_request(pkt, buf, len);
+                    }
+                    uint16_t flags = GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_VALID | (prefix << 8);
+                    if (netif_set_opt(iface,
+                        NETOPT_IPV6_ADDR, flags, (ipv6_addr_t *) ipv6_buffer, ipv6_buffer_len) < 0) {
+                        return _coap_internal_server_error(pkt, buf, len);
+                    }
+                } else {
+                    return _coap_bad_request(pkt, buf, len);
+                }
+            }
         } else {
             return _coap_bad_request(pkt, buf, len);
         }
         break;
     }
     return coap_reply_simple(pkt, COAP_CODE_205, buf, len,
-        COAP_FORMAT_SENML_CBOR, buffer, nanocbor_encoded_len(&enc));
+        COAP_FORMAT_CBOR, buffer, nanocbor_encoded_len(&enc));
 }
 
 NANOCOAP_RESOURCE(netif_cbor) { \
