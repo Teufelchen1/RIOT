@@ -5,6 +5,47 @@
 #include "nanocbor/nanocbor.h"
 #include "net/nanocoap.h"
 
+static int _get_netif_from_cbor(nanocbor_value_t *decoder, netif_t **iface)
+{
+    uint32_t tag = 0;
+
+    if (nanocbor_get_tag(decoder, &tag) != NANOCBOR_OK) {
+        return -EBADMSG;
+    }
+
+    /* netifname is 20, self choosen */
+    if (tag != 20) {
+        return -EINVAL;
+    }
+
+    char *name_buf = NULL;
+    size_t name_len = 0;
+
+    if (nanocbor_get_tstr(decoder, (const uint8_t **) &name_buf, &name_len) < 0) {
+        return -EBADMSG;
+    }
+    *iface = netif_get_by_name_buffer(name_buf, name_len);
+
+    if (*iface == NULL) {
+        return -ENODEV;
+    }
+
+    return 1;
+}
+
+static int _get_ipv6_from_cbor(nanocbor_value_t *decoder, ipv6_addr_t **ipv6_buffer)
+{
+    size_t ipv6_buffer_len;
+    if (nanocbor_get_bstr(decoder, (const uint8_t **) ipv6_buffer, &ipv6_buffer_len) != NANOCBOR_OK) {
+        return -EBADMSG;
+    }
+    if (ipv6_buffer_len != 16) {
+        return -EINVAL;
+    }
+
+    return 1;
+}
+
 static int _netif_read(netif_t *iface, nanocbor_encoder_t *enc)
 {
     int res = 0;
@@ -178,44 +219,73 @@ static int _netif_read(netif_t *iface, nanocbor_encoder_t *enc)
     return 0;
 }
 
-static int _get_netif_from_cbor(nanocbor_value_t *decoder, netif_t **iface)
+static int _tag303(nanocbor_value_t *decoder, netif_t *netif, uint16_t method)
 {
-    uint32_t tag = 0;
-
-    if (nanocbor_get_tag(decoder, &tag) != NANOCBOR_OK) {
-        return -EBADMSG;
-    }
-
-    /* netifname is 20, self choosen */
-    if (tag != 20) {
+    if (method == COAP_PATCH) {
+        bool netopt_change = false;
+        if (nanocbor_get_bool(decoder, &netopt_change) != NANOCBOR_OK) {
+            return -EBADMSG;
+        }
+        netopt_enable_t en_or_dis = netopt_change ? NETOPT_ENABLE : NETOPT_DISABLE;
+#if IS_USED(MODULE_LWIP_NETIF) /* lwIP sets netif state, not link state */
+        if (netif_set_opt(netif, NETOPT_ACTIVE, 0, &en_or_dis, sizeof(en_or_dis)) < 0) {
+            return -EIO;
+        }
+#else
+        if (netif_set_opt(netif, NETOPT_LINK, 0, &en_or_dis, sizeof(en_or_dis)) < 0) {
+            return -EIO;
+        }
+#endif
+    } else {
         return -EINVAL;
     }
-
-    char *name_buf = NULL;
-    size_t name_len = 0;
-
-    if (nanocbor_get_tstr(decoder, (const uint8_t **) &name_buf, &name_len) < 0) {
-        return -EBADMSG;
-    }
-    *iface = netif_get_by_name_buffer(name_buf, name_len);
-
-    if (*iface == NULL) {
-        return -ENODEV;
-    }
-
     return 1;
 }
 
-static int _get_ipv6_from_cbor(nanocbor_value_t *decoder, ipv6_addr_t **ipv6_buffer)
+static int _tag54(nanocbor_value_t *decoder, netif_t *netif, uint16_t method)
 {
-    size_t ipv6_buffer_len;
-    if (nanocbor_get_bstr(decoder, (const uint8_t **) ipv6_buffer, &ipv6_buffer_len) != NANOCBOR_OK) {
-        return -EBADMSG;
-    }
-    if (ipv6_buffer_len != 16) {
-        return -EINVAL;
-    }
+    int ret = 0;
+    if (method == COAP_PATCH) {
+        ipv6_addr_t *ipv6_addr;
+        if ((ret = _get_ipv6_from_cbor(decoder, &ipv6_addr)) < 0) {
+            return ret;
+        }
 
+        if (ipv6_addr_is_multicast(ipv6_addr)) {
+            if (netif_set_opt(netif, NETOPT_IPV6_GROUP_LEAVE, 0, ipv6_addr,
+                              sizeof(ipv6_addr_t)) < 0) {
+                return -EIO;
+            }
+        }
+        else {
+            if (netif_set_opt(netif, NETOPT_IPV6_ADDR_REMOVE, 0, ipv6_addr,
+                              sizeof(ipv6_addr_t)) < 0) {
+                return -EIO;
+            }
+        }
+    }
+    if (method == COAP_POST) {
+        nanocbor_value_t inner_array;
+        if(nanocbor_enter_array(decoder, &inner_array) != NANOCBOR_OK) {
+            return -EBADMSG;
+        }
+
+        ipv6_addr_t *ipv6_addr;
+        if ((ret = _get_ipv6_from_cbor(&inner_array, &ipv6_addr)) < 0) {
+            return ret;
+        }
+
+        uint8_t prefix = 128;
+        if (nanocbor_get_uint8(&inner_array, &prefix) < 0) {
+            return -EBADMSG;
+        }
+
+        uint16_t flags = GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_VALID | (prefix << 8);
+        if (netif_set_opt(netif,
+            NETOPT_IPV6_ADDR, flags, ipv6_addr, sizeof(ipv6_addr_t)) < 0) {
+            return -EIO;
+        }
+    }
     return 1;
 }
 
@@ -283,12 +353,6 @@ static ssize_t _coap_unprocessable_entity(coap_pkt_t *pkt, uint8_t *buf, size_t 
                     COAP_FORMAT_NONE, NULL, 0);
 }
 
-static ssize_t _coap_internal_server_error(coap_pkt_t *pkt, uint8_t *buf, size_t len)
-{
-    return coap_reply_simple(pkt, COAP_CODE_INTERNAL_SERVER_ERROR, buf, len,
-                    COAP_FORMAT_NONE, NULL, 0);
-}
-
 ssize_t _gnrc_netif_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len,
                                   coap_request_ctx_t *context)
 {
@@ -337,66 +401,13 @@ ssize_t _gnrc_netif_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len,
 
     switch (tag) {
     case 303:
-        if (method == COAP_PATCH) {
-            bool netopt_change = false;
-            if (nanocbor_get_bool(&array, &netopt_change) != NANOCBOR_OK) {
-                return _coap_internal_server_error(pkt, buf, len);
-            }
-            netopt_enable_t en_or_dis = netopt_change ? NETOPT_ENABLE : NETOPT_DISABLE;
-#if IS_USED(MODULE_LWIP_NETIF) /* lwIP sets netif state, not link state */
-            if (netif_set_opt(netif, NETOPT_ACTIVE, 0, &en_or_dis, sizeof(en_or_dis)) < 0) {
-                return _coap_internal_server_error(pkt, buf, len);
-            }
-#else
-            if (netif_set_opt(netif, NETOPT_LINK, 0, &en_or_dis, sizeof(en_or_dis)) < 0) {
-                return _coap_internal_server_error(pkt, buf, len);
-            }
-#endif
-        } else {
-            return _coap_bad_request(pkt, buf, len);
+        if ((ret = _tag303(&array, netif, method)) < 0) {
+            return _coap_errno(pkt, buf, len, ret);
         }
         break;
     case 54:
-        if (method == COAP_PATCH) {
-            ipv6_addr_t *ipv6_addr;
-            if ((ret = _get_ipv6_from_cbor(&array, &ipv6_addr)) < 0) {
-                return _coap_errno(pkt, buf, len, ret);
-            }
-
-            if (ipv6_addr_is_multicast(ipv6_addr)) {
-                if (netif_set_opt(netif, NETOPT_IPV6_GROUP_LEAVE, 0, ipv6_addr,
-                                  sizeof(ipv6_addr_t)) < 0) {
-                    return _coap_internal_server_error(pkt, buf, len);
-                }
-            }
-            else {
-                if (netif_set_opt(netif, NETOPT_IPV6_ADDR_REMOVE, 0, ipv6_addr,
-                                  sizeof(ipv6_addr_t)) < 0) {
-                    return _coap_internal_server_error(pkt, buf, len);
-                }
-            }
-        }
-        if (method == COAP_POST) {
-            nanocbor_value_t inner_array;
-            if(nanocbor_enter_array(&array, &inner_array) != NANOCBOR_OK) {
-                return _coap_bad_request(pkt, buf, len);
-            }
-
-            ipv6_addr_t *ipv6_addr;
-            if ((ret = _get_ipv6_from_cbor(&inner_array, &ipv6_addr)) < 0) {
-                return _coap_errno(pkt, buf, len, ret);
-            }
-
-            uint8_t prefix = 128;
-            if (nanocbor_get_uint8(&inner_array, &prefix) < 0) {
-                return _coap_bad_request(pkt, buf, len);
-            }
-
-            uint16_t flags = GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_VALID | (prefix << 8);
-            if (netif_set_opt(netif,
-                NETOPT_IPV6_ADDR, flags, ipv6_addr, sizeof(ipv6_addr_t)) < 0) {
-                return _coap_internal_server_error(pkt, buf, len);
-            }
+        if ((ret = _tag54(&array, netif, method)) < 0) {
+            return _coap_errno(pkt, buf, len, ret);
         }
         break;
     default:
