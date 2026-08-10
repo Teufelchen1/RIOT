@@ -1,27 +1,34 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "net/nanocoap.h"
-#include "nanocbor/nanocbor.h"
+#include "net/unicoap.h"
 
-static ssize_t _riot_version_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len, coap_request_ctx_t *context)
+static int _riot_version_handler(
+    unicoap_message_t* message, const unicoap_aux_t* aux,
+    unicoap_request_context_t* ctx, void* arg
+)
 {
-    (void)context;
-    return coap_reply_simple(pkt, COAP_CODE_205, buf, len,
-            COAP_FORMAT_TEXT, (uint8_t*)RIOT_VERSION, strlen(RIOT_VERSION));
+    (void) aux;
+    (void) arg;
+    unicoap_response_init_string(message, UNICOAP_STATUS_CONTENT, RIOT_VERSION);
+    return unicoap_send_response(message, ctx);
 }
 
-static ssize_t _riot_board_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len, coap_request_ctx_t *context)
+static int _riot_board_handler(
+    unicoap_message_t* message, const unicoap_aux_t* aux,
+    unicoap_request_context_t* ctx, void* arg
+)
 {
-    (void)context;
-    return coap_reply_simple(pkt, COAP_CODE_205, buf, len,
-            COAP_FORMAT_TEXT, (uint8_t*)RIOT_BOARD, strlen(RIOT_BOARD));
+    (void) aux;
+    (void) arg;
+    unicoap_response_init_string(message, UNICOAP_STATUS_CONTENT, RIOT_BOARD);
+    return unicoap_send_response(message, ctx);
 }
 
-NANOCOAP_RESOURCE(riot_version) { \
-    .path = "/jelly/ver", .methods = COAP_GET, .handler = _riot_version_handler, .context = NULL \
+UNICOAP_RESOURCE(riot_version) { \
+    .path = UNICOAP_PATH("jelly", "ver"), .methods = UNICOAP_METHODS(UNICOAP_METHOD_GET), .handler = _riot_version_handler,\
 };
 
-NANOCOAP_RESOURCE(riot_board) { \
-    .path = "/jelly/board", .methods = COAP_GET, .handler = _riot_board_handler, .context = NULL \
+UNICOAP_RESOURCE(riot_board) { \
+    .path = UNICOAP_PATH("jelly", "board"), .methods = UNICOAP_METHODS(UNICOAP_METHOD_GET), .handler = _riot_board_handler,\
 };

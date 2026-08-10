@@ -1,11 +1,12 @@
 USEPKG += nanocbor
 
+USEMODULE += unicoap_server_resource_declarations
 USEMODULE += saul_default
 USEMODULE += senml_saul
 # already included in sys/Makefile.dep
 # shown here to remind that jelly depends on it
-USEMODULE += stdio_slipdev
-USEMODULE += slipdev_config
+# USEMODULE += stdio_slipdev
+# USEMODULE += slipdev_config
 
 RIOT_TERMINAL = jelly
 TERMPROG  = Jelly

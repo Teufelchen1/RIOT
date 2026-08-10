@@ -1,9 +1,10 @@
 #include <stdio.h>
 
-#include "saul_reg.h"
-#include "senml/saul.h"
 #include "nanocbor/nanocbor.h"
-#include "net/nanocoap.h"
+#include "net/gnrc/netif.h"
+#include "net/gnrc/netif/ipv6.h"
+#include "net/ipv6/addr.h"
+#include "net/unicoap.h"
 
 static int _get_netif_from_cbor(nanocbor_value_t *decoder, netif_t **iface)
 {
@@ -219,9 +220,9 @@ static int _netif_read(netif_t *iface, nanocbor_encoder_t *enc)
     return 0;
 }
 
-static int _tag303(nanocbor_value_t *decoder, netif_t *netif, uint16_t method)
+static int _tag303(nanocbor_value_t *decoder, netif_t *netif, unicoap_method_t method)
 {
-    if (method == COAP_PATCH) {
+    if (method == UNICOAP_METHOD_PATCH) {
         bool netopt_change = false;
         if (nanocbor_get_bool(decoder, &netopt_change) != NANOCBOR_OK) {
             return -EBADMSG;
@@ -242,10 +243,10 @@ static int _tag303(nanocbor_value_t *decoder, netif_t *netif, uint16_t method)
     return 1;
 }
 
-static int _tag54(nanocbor_value_t *decoder, netif_t *netif, uint16_t method)
+static int _tag54(nanocbor_value_t *decoder, netif_t *netif, unicoap_method_t method)
 {
     int ret = 0;
-    if (method == COAP_PATCH) {
+    if (method == UNICOAP_METHOD_PATCH) {
         ipv6_addr_t *ipv6_addr;
         if ((ret = _get_ipv6_from_cbor(decoder, &ipv6_addr)) < 0) {
             return ret;
@@ -264,7 +265,7 @@ static int _tag54(nanocbor_value_t *decoder, netif_t *netif, uint16_t method)
             }
         }
     }
-    if (method == COAP_POST) {
+    if (method == UNICOAP_METHOD_POST) {
         nanocbor_value_t inner_array;
         if(nanocbor_enter_array(decoder, &inner_array) != NANOCBOR_OK) {
             return -EBADMSG;
@@ -316,62 +317,53 @@ static int _convert_errorno_to_coap_code(int num)
 {
     switch (num) {
     case -EINVAL:
-        return COAP_CODE_UNPROCESSABLE_ENTITY;
+        return UNICOAP_STATUS_UNPROCESSABLE_ENTITY;
     case -EBADMSG:
-        return COAP_CODE_BAD_REQUEST;
+        return UNICOAP_STATUS_BAD_REQUEST;
     case -ECANCELED:
     case -EIO:
-        return COAP_CODE_INTERNAL_SERVER_ERROR;
+        return UNICOAP_STATUS_INTERNAL_SERVER_ERROR;
     case -ENODEV:
-        return COAP_CODE_404;
+        return UNICOAP_STATUS_PATH_NOT_FOUND;
     case -ENOTSUP:
-        return COAP_CODE_METHOD_NOT_ALLOWED;
+        return UNICOAP_STATUS_METHOD_NOT_ALLOWED;
     default:
         if (num < 0) {
-            return COAP_CODE_INTERNAL_SERVER_ERROR;
+            return UNICOAP_STATUS_INTERNAL_SERVER_ERROR;
         } 
-        return COAP_CODE_CONTENT;
+        return UNICOAP_STATUS_CONTENT;
     }
 }
 
-static ssize_t _coap_errno(coap_pkt_t *pkt, uint8_t *buf, size_t len, int error)
+int _gnrc_netif_handler(unicoap_message_t* message, const unicoap_aux_t* aux,
+    unicoap_request_context_t* ctx, void* arg)
 {
-    int coap_code = _convert_errorno_to_coap_code(error);
-    return coap_reply_simple(pkt, coap_code, buf, len,
-                    COAP_FORMAT_NONE, NULL, 0);
-}
+    (void) arg;
+    (void) aux;
+    UNICOAP_OPTIONS_ALLOC(options, 2);
 
-static ssize_t _coap_bad_request(coap_pkt_t *pkt, uint8_t *buf, size_t len)
-{
-    return coap_reply_simple(pkt, COAP_CODE_BAD_REQUEST, buf, len,
-                    COAP_FORMAT_NONE, NULL, 0);
-}
+    if (unicoap_options_set_content_format(&options, UNICOAP_FORMAT_CBOR) < 0) {
+        return UNICOAP_STATUS_INTERNAL_SERVER_ERROR;
+    }
+    uint8_t *payload = unicoap_message_payload_get(message);
+    size_t payload_len = unicoap_message_payload_get_size(message);
 
-static ssize_t _coap_unprocessable_entity(coap_pkt_t *pkt, uint8_t *buf, size_t len)
-{
-    return coap_reply_simple(pkt, COAP_CODE_UNPROCESSABLE_ENTITY, buf, len,
-                    COAP_FORMAT_NONE, NULL, 0);
-}
 
-ssize_t _gnrc_netif_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len,
-                                  coap_request_ctx_t *context)
-{
-    (void) context;
     uint8_t buffer[500];
 
     nanocbor_encoder_t enc;
     nanocbor_encoder_init(&enc, buffer, sizeof(buffer));
 
     nanocbor_value_t decoder;
-    nanocbor_decoder_init(&decoder, pkt->payload, pkt->payload_len);
+    nanocbor_decoder_init(&decoder, payload, payload_len);
 
-    uint16_t method = coap_method2flag(coap_get_code_raw(pkt));
-    if (method == COAP_GET) {
+    unicoap_method_t method = unicoap_request_get_method(message);
+    if (method == UNICOAP_METHOD_GET) {
         if (nanocbor_get_type(&decoder) == NANOCBOR_TYPE_TAG) {
             netif_t *netif = NULL;
             int ret = _get_netif_from_cbor(&decoder, &netif);
             if (ret < 0) {
-                return _coap_errno(pkt, buf, len, ret);
+                return _convert_errorno_to_coap_code(ret);
             }
 
             assert(nanocbor_fmt_array(&enc, 1) > 0);
@@ -379,49 +371,52 @@ ssize_t _gnrc_netif_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len,
         } else {
             _list(&enc);
         }
-        return coap_reply_simple(pkt, COAP_CODE_205, buf, len,
-        COAP_FORMAT_CBOR, buffer, nanocbor_encoded_len(&enc));
+
+        message->options = &options;
+        unicoap_response_init(message, UNICOAP_STATUS_CONTENT, buffer, nanocbor_encoded_len(&enc));
+        return unicoap_send_response(message, ctx);
     }
 
     nanocbor_value_t array;
     if (nanocbor_enter_array(&decoder, &array) != NANOCBOR_OK) {
-        return _coap_bad_request(pkt, buf, len);
+        return UNICOAP_STATUS_BAD_REQUEST;
     }
 
     netif_t *netif = NULL;
     int ret = _get_netif_from_cbor(&array, &netif);
     if (ret < 0) {
-        return _coap_errno(pkt, buf, len, ret);
+        return _convert_errorno_to_coap_code(ret);
     }
 
     uint32_t tag = 0;
     if (nanocbor_get_tag(&array, &tag) != NANOCBOR_OK) {
-        return _coap_bad_request(pkt, buf, len);
+        return UNICOAP_STATUS_BAD_REQUEST;
     }
 
     switch (tag) {
     case 303:
         if ((ret = _tag303(&array, netif, method)) < 0) {
-            return _coap_errno(pkt, buf, len, ret);
+            return _convert_errorno_to_coap_code(ret);
         }
         break;
     case 54:
         if ((ret = _tag54(&array, netif, method)) < 0) {
-            return _coap_errno(pkt, buf, len, ret);
+            return _convert_errorno_to_coap_code(ret);
         }
         break;
     default:
-        return _coap_unprocessable_entity(pkt, buf, len);
+        return UNICOAP_STATUS_UNPROCESSABLE_ENTITY;
     }
-    return coap_reply_simple(pkt, COAP_CODE_205, buf, len,
-        COAP_FORMAT_CBOR, buffer, nanocbor_encoded_len(&enc));
+
+    message->options = &options;
+    unicoap_response_init(message, UNICOAP_STATUS_CONTENT, buffer, nanocbor_encoded_len(&enc));
+    return unicoap_send_response(message, ctx);
 }
 
-NANOCOAP_RESOURCE(netif_cbor) { \
-    .path = "/jelly/netif", \
-    .methods = COAP_GET | COAP_POST | COAP_PUT | COAP_PATCH,\
-    .handler = _gnrc_netif_handler, \
-    .context = NULL \
+UNICOAP_RESOURCE(netif_cbor) {
+  .path = UNICOAP_PATH("jelly", "netif"),
+  .handler = _gnrc_netif_handler,
+  .methods = UNICOAP_METHODS(UNICOAP_METHOD_GET, UNICOAP_METHOD_PUT, UNICOAP_METHOD_POST, UNICOAP_METHOD_PATCH),
 };
 
 
