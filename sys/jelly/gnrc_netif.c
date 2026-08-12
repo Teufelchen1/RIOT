@@ -6,6 +6,8 @@
 #include "net/ipv6/addr.h"
 #include "net/unicoap.h"
 
+static int _netif_list(netif_t *iface, nanocbor_encoder_t *enc);
+
 static int _get_netif_from_cbor(nanocbor_value_t *decoder, netif_t **iface)
 {
     uint32_t tag = 0;
@@ -47,178 +49,181 @@ static int _get_ipv6_from_cbor(nanocbor_value_t *decoder, ipv6_addr_t **ipv6_buf
     return 1;
 }
 
-static int _netif_read(netif_t *iface, nanocbor_encoder_t *enc)
-{
-    int res = 0;
 
-    if (iface == NULL) {
-        return -ENODEV;
-    }
+// static int _netif_read(netif_t *iface, nanocbor_encoder_t *enc)
+// {
+//     int res = 0;
+//     int16_t i16 = 0;
+//     uint8_t u8 = 0;
+//     uint16_t u16 = 0;
+//     uint32_t u32 = 0;
 
-    assert(nanocbor_fmt_array_indefinite(enc) > 0);
+//     if (iface == NULL) {
+//         return -ENODEV;
+//     }
 
-    char name[CONFIG_NETIF_NAMELENMAX];
+//     assert(nanocbor_fmt_array_indefinite(enc) > 0);
 
-    netif_get_name(iface, name);
+//     char name[CONFIG_NETIF_NAMELENMAX];
 
-    /* 20 as name, self choosen */
-    assert(nanocbor_fmt_tag(enc, 20) > 0);
-    /* safe: netif_get_name promises to be null terminated */
-    assert(nanocbor_put_tstr(enc, name) == NANOCBOR_OK);
+//     netif_get_name(iface, name);
 
-    uint8_t hwaddr[GNRC_NETIF_L2ADDR_MAXLEN];
-    res = netif_get_opt(iface, NETOPT_ADDRESS_LONG, 0, hwaddr, sizeof(hwaddr));
-    if (res >= 0) {
-        /* 48 is set by iana as IEEE MAC, RFC9542 */
-        assert(nanocbor_fmt_tag(enc, 48) > 0);
-        assert(nanocbor_put_bstr(enc, hwaddr, sizeof(hwaddr)) == NANOCBOR_OK);
-    }
+//     /* 20 as name, self choosen */
+//     assert(nanocbor_fmt_tag(enc, 20) > 0);
+//     /* safe: netif_get_name promises to be null terminated */
+//     assert(nanocbor_put_tstr(enc, name) == NANOCBOR_OK);
+
+//     uint8_t hwaddr[GNRC_NETIF_L2ADDR_MAXLEN];
+//     res = netif_get_opt(iface, NETOPT_ADDRESS_LONG, 0, hwaddr, sizeof(hwaddr));
+//     if (res >= 0) {
+//         /* 48 is set by iana as IEEE MAC, RFC9542 */
+//         assert(nanocbor_fmt_tag(enc, 48) > 0);
+//         assert(nanocbor_put_bstr(enc, hwaddr, sizeof(hwaddr)) == NANOCBOR_OK);
+//     }
 //     res = netif_get_opt(iface, NETOPT_CHANNEL, 0, &u16, sizeof(u16));
 //     if (res >= 0) {
-//         printf(" Channel: %" PRIu16 " ", u16);
+//         assert(nanocbor_fmt_tag(enc, 304) > 0);
+//         assert(nanocbor_fmt_uint(enc, u16) > 0);
 //     }
 //     res = netif_get_opt(iface, NETOPT_CHANNEL_FREQUENCY, 0, &u32, sizeof(u32));
 //     if (res >= 0) {
-//         printf(" Frequency: %" PRIu32 "Hz ", u32);
+//         assert(nanocbor_fmt_tag(enc, 305) > 0);
+//         assert(nanocbor_fmt_uint(enc, u32) > 0);
 //     }
 //     res = netif_get_opt(iface, NETOPT_CHANNEL_PAGE, 0, &u16, sizeof(u16));
 //     if (res >= 0) {
-//         printf(" Page: %" PRIu16 " ", u16);
+//         assert(nanocbor_fmt_tag(enc, 306) > 0);
+//         assert(nanocbor_fmt_uint(enc, u16) > 0);
 //     }
 //     res = netif_get_opt(iface, NETOPT_NID, 0, &u16, sizeof(u16));
 //     if (res >= 0) {
-//         printf(" NID: 0x%" PRIx16 " ", u16);
+//         assert(nanocbor_fmt_tag(enc, 307) > 0);
+//         assert(nanocbor_fmt_uint(enc, u16) > 0);
 //     }
 //     res = netif_get_opt(iface, NETOPT_RSSI, 0, &i16, sizeof(i16));
 //     if (res >= 0) {
-//         printf(" RSSI: %d ", i16);
+//         assert(nanocbor_fmt_tag(enc, 308) > 0);
+//         assert(nanocbor_fmt_int(enc, i16) > 0);
 //     }
-
 //     netopt_enable_t enabled;
 //     res = netif_get_opt(iface, NETOPT_LINK, 0, &enabled, sizeof(enabled));
 //     if (res >= 0) {
-//         printf(" Link: %s ", (enabled == NETOPT_ENABLE) ? "up" : "down" );
+//         // 303
+//         assert(nanocbor_fmt_tag(enc, 309) > 0);
+//         assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
 //     }
-
-//     line_thresh = _newline(0U, line_thresh);
-//     res = netif_get_opt(iface, NETOPT_ADDRESS_LONG, 0, hwaddr, sizeof(hwaddr));
-//     if (res >= 0) {
-//         char hwaddr_str[res * 3];
-//         printf("Long HWaddr: ");
-//         printf("%s ", l2util_addr_to_str(hwaddr, res, hwaddr_str));
-//         line_thresh++;
-//     }
-//     line_thresh = _newline(0U, line_thresh);
 //     res = netif_get_opt(iface, NETOPT_TX_POWER, 0, &i16, sizeof(i16));
 //     if (res >= 0) {
-//         printf(" TX-Power: %" PRIi16 "dBm ", i16);
+//         assert(nanocbor_fmt_tag(enc, 310) > 0);
+//         assert(nanocbor_fmt_int(enc, i16) > 0);
 //     }
+//     netopt_state_t state;
 //     res = netif_get_opt(iface, NETOPT_STATE, 0, &state, sizeof(state));
 //     if (res >= 0) {
-//         printf(" State: %s ", _netopt_state_str[state]);
-//         line_thresh++;
+//         assert(nanocbor_fmt_tag(enc, 311) > 0);
+//         assert(nanocbor_fmt_int(enc, state) > 0);
 //     }
 //     res = netif_get_opt(iface, NETOPT_RETRANS, 0, &u8, sizeof(u8));
 //     if (res >= 0) {
-//         printf(" max. Retrans.: %u ", (unsigned)u8);
-//         line_thresh++;
+//         assert(nanocbor_fmt_tag(enc, 312) > 0);
+//         assert(nanocbor_fmt_uint(enc, u8) > 0);
 //     }
 //     res = netif_get_opt(iface, NETOPT_CSMA_RETRIES, 0, &u8, sizeof(u8));
 //     if (res >= 0) {
 //         enabled = NETOPT_DISABLE;
 //         res = netif_get_opt(iface, NETOPT_CSMA, 0, &enabled, sizeof(enabled));
 //         if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
-//             printf(" CSMA Retries: %u ", (unsigned)u8);
+//             assert(nanocbor_fmt_tag(enc, 312) > 0);
+//             assert(nanocbor_fmt_uint(enc, u8) > 0);
 //         }
-//         line_thresh++;
 //     }
-//     /* XXX divide options and flags by at least two spaces! */
-//     line_thresh = _newline(0U, line_thresh);
-//     line_thresh = _netif_list_flag(iface, NETOPT_PROMISCUOUSMODE, "PROMISC  ",
-//                                    line_thresh);
-//     line_thresh = _netif_list_flag(iface, NETOPT_AUTOACK, "AUTOACK  ",
-//                                    line_thresh);
-//     line_thresh = _netif_list_flag(iface, NETOPT_ACK_REQ, "ACK_REQ  ",
-//                                    line_thresh);
-//     line_thresh = _netif_list_flag(iface, NETOPT_PRELOADING, "PRELOAD  ",
-//                                    line_thresh);
-//     line_thresh = _netif_list_flag(iface, NETOPT_RAWMODE, "RAWMODE  ",
-//                                    line_thresh);
-//     line_thresh = _netif_list_flag(iface, NETOPT_MAC_NO_SLEEP, "MAC_NO_SLEEP  ",
-//                                    line_thresh);
-//     line_thresh = _netif_list_flag(iface, NETOPT_CSMA, "CSMA  ",
-//                                    line_thresh);
-//     line_thresh += _LINE_THRESHOLD + 1; /* enforce linebreak after this option */
-//     line_thresh = _netif_list_flag(iface, NETOPT_AUTOCCA, "AUTOCCA  ",
-//                                    line_thresh);
-//     line_thresh = _netif_list_flag(iface, NETOPT_IQ_INVERT, "IQ_INVERT  ",
-//                                    line_thresh);
-//     line_thresh = _netif_list_flag(iface, NETOPT_SINGLE_RECEIVE, "RX_SINGLE  ",
-//                                    line_thresh);
-//     line_thresh = _netif_list_flag(iface, NETOPT_CHANNEL_HOP, "CHAN_HOP  ",
-//                                    line_thresh);
-//     line_thresh = _netif_list_flag(iface, NETOPT_OTAA, "OTAA  ",
-//                                    line_thresh);
-//     /* XXX divide options and flags by at least two spaces! */
-//     res = netif_get_opt(iface, NETOPT_MAX_PDU_SIZE, 0, &u16, sizeof(u16));
-//     if (res > 0) {
-//         printf("L2-PDU:%" PRIu16 "  ", u16);
-//         line_thresh++;
-//     }
-//     res = netif_get_opt(iface, NETOPT_SRC_LEN, 0, &u16, sizeof(u16));
-//     /* XXX divide options and flags by at least two spaces before this line! */
+// //     /* XXX divide options and flags by at least two spaces! */
+// //     line_thresh = _newline(0U, line_thresh);
+// //     line_thresh = _netif_list_flag(iface, NETOPT_PROMISCUOUSMODE, "PROMISC  ",
+// //                                    line_thresh);
+// //     line_thresh = _netif_list_flag(iface, NETOPT_AUTOACK, "AUTOACK  ",
+// //                                    line_thresh);
+// //     line_thresh = _netif_list_flag(iface, NETOPT_ACK_REQ, "ACK_REQ  ",
+// //                                    line_thresh);
+// //     line_thresh = _netif_list_flag(iface, NETOPT_PRELOADING, "PRELOAD  ",
+// //                                    line_thresh);
+// //     line_thresh = _netif_list_flag(iface, NETOPT_RAWMODE, "RAWMODE  ",
+// //                                    line_thresh);
+// //     line_thresh = _netif_list_flag(iface, NETOPT_MAC_NO_SLEEP, "MAC_NO_SLEEP  ",
+// //                                    line_thresh);
+// //     line_thresh = _netif_list_flag(iface, NETOPT_CSMA, "CSMA  ",
+// //                                    line_thresh);
+// //     line_thresh += _LINE_THRESHOLD + 1; /* enforce linebreak after this option */
+// //     line_thresh = _netif_list_flag(iface, NETOPT_AUTOCCA, "AUTOCCA  ",
+// //                                    line_thresh);
+// //     line_thresh = _netif_list_flag(iface, NETOPT_IQ_INVERT, "IQ_INVERT  ",
+// //                                    line_thresh);
+// //     line_thresh = _netif_list_flag(iface, NETOPT_SINGLE_RECEIVE, "RX_SINGLE  ",
+// //                                    line_thresh);
+// //     line_thresh = _netif_list_flag(iface, NETOPT_CHANNEL_HOP, "CHAN_HOP  ",
+// //                                    line_thresh);
+// //     line_thresh = _netif_list_flag(iface, NETOPT_OTAA, "OTAA  ",
+// //                                    line_thresh);
+// //     /* XXX divide options and flags by at least two spaces! */
+// //     res = netif_get_opt(iface, NETOPT_MAX_PDU_SIZE, 0, &u16, sizeof(u16));
+// //     if (res > 0) {
+// //         printf("L2-PDU:%" PRIu16 "  ", u16);
+// //         line_thresh++;
+// //     }
+// //     res = netif_get_opt(iface, NETOPT_SRC_LEN, 0, &u16, sizeof(u16));
+// //     /* XXX divide options and flags by at least two spaces before this line! */
+// //     if (res >= 0) {
+// //         printf("Source address length: %" PRIu16, u16);
+// //         line_thresh++;
+// //     }
+// //     line_thresh = _newline(0U, line_thresh);
+
+//     /* 302 as wired/wireless, self choosen */
+//     assert(nanocbor_fmt_tag(enc, 302) > 0);
+//     bool is_wired = netif_get_opt(iface, NETOPT_IS_WIRED, 0, NULL, 0) > 0;
+//     assert(nanocbor_fmt_bool(enc,is_wired ) > 0);
+
+// #ifdef MODULE_IPV6
+//     ipv6_addr_t ipv6_addrs[CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF];
+//     ipv6_addr_t ipv6_groups[GNRC_NETIF_IPV6_GROUPS_NUMOF];
+
+//     res = netif_get_opt(iface, NETOPT_IPV6_ADDR, 0, ipv6_addrs,
+//                         sizeof(ipv6_addrs));
 //     if (res >= 0) {
-//         printf("Source address length: %" PRIu16, u16);
-//         line_thresh++;
+//         uint8_t ipv6_addrs_flags[CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF];
+//         memset(ipv6_addrs_flags, 0, sizeof(ipv6_addrs_flags));
+
+//         /* assume it to succeed (otherwise array will stay 0) */
+//         /* netif_get_opt(iface, NETOPT_IPV6_ADDR_FLAGS, 0, ipv6_addrs_flags,
+//                       sizeof(ipv6_addrs_flags)); */
+//         /* yes, the res of NETOPT_IPV6_ADDR is meant to be here ;-) */
+//         for (unsigned i = 0; i < (res / sizeof(ipv6_addr_t)); i++) {
+//             /* 54 is set by iana as IPv6, RFC9164 */
+//             assert(nanocbor_fmt_tag(enc, 54) > 0);
+//             assert(sizeof(ipv6_addr_t) == 16);
+//             assert(nanocbor_put_bstr(enc, (uint8_t *) &ipv6_addrs[i], 16) == NANOCBOR_OK);
+//             /* _netif_list_ipv6(&ipv6_addrs[i], ipv6_addrs_flags[i]); */
+//         }
 //     }
-//     line_thresh = _newline(0U, line_thresh);
+//     res = netif_get_opt(iface, NETOPT_IPV6_GROUP, 0, ipv6_groups,
+//                         sizeof(ipv6_groups));
+//     if (res >= 0) {
+//         for (unsigned i = 0; i < (res / sizeof(ipv6_addr_t)); i++) {
+//             /* 54 is set by iana as IPv6, RFC9164 */
+//             assert(nanocbor_fmt_tag(enc, 54) > 0);
+//             assert(nanocbor_fmt_array(enc, 2) > 0);
+//             /* Prefix, todo */
+//             assert(nanocbor_fmt_int(enc, 128) > 0);
 
-    /* 302 as wired/wireless, self choosen */
-    assert(nanocbor_fmt_tag(enc, 302) > 0);
-    bool is_wired = netif_get_opt(iface, NETOPT_IS_WIRED, 0, NULL, 0) > 0;
-    assert(nanocbor_fmt_bool(enc,is_wired ) > 0);
+//             assert(sizeof(ipv6_addr_t) == 16);
+//             assert(nanocbor_put_bstr(enc, (uint8_t *) &ipv6_groups[i], 16) == NANOCBOR_OK);
+//         }
+//     }
+// #endif
 
-#ifdef MODULE_IPV6
-    ipv6_addr_t ipv6_addrs[CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF];
-    ipv6_addr_t ipv6_groups[GNRC_NETIF_IPV6_GROUPS_NUMOF];
-
-    res = netif_get_opt(iface, NETOPT_IPV6_ADDR, 0, ipv6_addrs,
-                        sizeof(ipv6_addrs));
-    if (res >= 0) {
-        uint8_t ipv6_addrs_flags[CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF];
-        memset(ipv6_addrs_flags, 0, sizeof(ipv6_addrs_flags));
-
-        /* assume it to succeed (otherwise array will stay 0) */
-        /* netif_get_opt(iface, NETOPT_IPV6_ADDR_FLAGS, 0, ipv6_addrs_flags,
-                      sizeof(ipv6_addrs_flags)); */
-        /* yes, the res of NETOPT_IPV6_ADDR is meant to be here ;-) */
-        for (unsigned i = 0; i < (res / sizeof(ipv6_addr_t)); i++) {
-            /* 54 is set by iana as IPv6, RFC9164 */
-            assert(nanocbor_fmt_tag(enc, 54) > 0);
-            assert(sizeof(ipv6_addr_t) == 16);
-            assert(nanocbor_put_bstr(enc, (uint8_t *) &ipv6_addrs[i], 16) == NANOCBOR_OK);
-            /* _netif_list_ipv6(&ipv6_addrs[i], ipv6_addrs_flags[i]); */
-        }
-    }
-    res = netif_get_opt(iface, NETOPT_IPV6_GROUP, 0, ipv6_groups,
-                        sizeof(ipv6_groups));
-    if (res >= 0) {
-        for (unsigned i = 0; i < (res / sizeof(ipv6_addr_t)); i++) {
-            /* 54 is set by iana as IPv6, RFC9164 */
-            assert(nanocbor_fmt_tag(enc, 54) > 0);
-            assert(nanocbor_fmt_array(enc, 2) > 0);
-            /* Prefix, todo */
-            assert(nanocbor_fmt_int(enc, 128) > 0);
-
-            assert(sizeof(ipv6_addr_t) == 16);
-            assert(nanocbor_put_bstr(enc, (uint8_t *) &ipv6_groups[i], 16) == NANOCBOR_OK);
-        }
-    }
-#endif
-
-    assert(nanocbor_fmt_end_indefinite(enc) > 0);
-    return 0;
-}
+//     assert(nanocbor_fmt_end_indefinite(enc) > 0);
+//     return 0;
+// }
 
 static int _tag303(nanocbor_value_t *decoder, netif_t *netif, unicoap_method_t method)
 {
@@ -253,15 +258,15 @@ static int _tag54(nanocbor_value_t *decoder, netif_t *netif, unicoap_method_t me
         }
 
         if (ipv6_addr_is_multicast(ipv6_addr)) {
-            if (netif_set_opt(netif, NETOPT_IPV6_GROUP_LEAVE, 0, ipv6_addr,
-                              sizeof(ipv6_addr_t)) < 0) {
-                return -EIO;
+            if ((ret = netif_set_opt(netif, NETOPT_IPV6_GROUP_LEAVE, 0, ipv6_addr,
+                              sizeof(ipv6_addr_t)) < 0)) {
+                return ret;
             }
         }
         else {
-            if (netif_set_opt(netif, NETOPT_IPV6_ADDR_REMOVE, 0, ipv6_addr,
-                              sizeof(ipv6_addr_t)) < 0) {
-                return -EIO;
+            if ((ret = netif_set_opt(netif, NETOPT_IPV6_ADDR_REMOVE, 0, ipv6_addr,
+                              sizeof(ipv6_addr_t)) < 0)) {
+                return ret;
             }
         }
     }
@@ -282,9 +287,9 @@ static int _tag54(nanocbor_value_t *decoder, netif_t *netif, unicoap_method_t me
         }
 
         uint16_t flags = GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_VALID | (prefix << 8);
-        if (netif_set_opt(netif,
-            NETOPT_IPV6_ADDR, flags, ipv6_addr, sizeof(ipv6_addr_t)) < 0) {
-            return -EIO;
+        if ((ret = netif_set_opt(netif,
+            NETOPT_IPV6_ADDR, flags, ipv6_addr, sizeof(ipv6_addr_t))) < 0) {
+            return ret;
         }
     }
     return 1;
@@ -306,7 +311,7 @@ static void _list(nanocbor_encoder_t *enc)
             netif = next;
             next = netif_iter(netif);
         } while (next && next != last);
-        _netif_read(netif, enc);
+        _netif_list(netif, enc);
         last = netif;
     }
 
@@ -340,14 +345,9 @@ int _gnrc_netif_handler(unicoap_message_t* message, const unicoap_aux_t* aux,
 {
     (void) arg;
     (void) aux;
-    UNICOAP_OPTIONS_ALLOC(options, 2);
 
-    if (unicoap_options_set_content_format(&options, UNICOAP_FORMAT_CBOR) < 0) {
-        return UNICOAP_STATUS_INTERNAL_SERVER_ERROR;
-    }
     uint8_t *payload = unicoap_message_payload_get(message);
     size_t payload_len = unicoap_message_payload_get_size(message);
-
 
     uint8_t buffer[500];
 
@@ -367,13 +367,18 @@ int _gnrc_netif_handler(unicoap_message_t* message, const unicoap_aux_t* aux,
             }
 
             assert(nanocbor_fmt_array(&enc, 1) > 0);
-            _netif_read(netif, &enc);
+            _netif_list(netif, &enc);
         } else {
             _list(&enc);
         }
 
-        message->options = &options;
-        unicoap_response_init(message, UNICOAP_STATUS_CONTENT, buffer, nanocbor_encoded_len(&enc));
+        UNICOAP_OPTIONS_ALLOC(options, 2);
+
+        if (unicoap_options_set_content_format(&options, UNICOAP_FORMAT_CBOR) < 0) {
+            return UNICOAP_STATUS_INTERNAL_SERVER_ERROR;
+        }
+
+        unicoap_response_init_with_options(message, UNICOAP_STATUS_CONTENT, buffer, nanocbor_encoded_len(&enc), &options);
         return unicoap_send_response(message, ctx);
     }
 
@@ -408,9 +413,7 @@ int _gnrc_netif_handler(unicoap_message_t* message, const unicoap_aux_t* aux,
         return UNICOAP_STATUS_UNPROCESSABLE_ENTITY;
     }
 
-    message->options = &options;
-    unicoap_response_init(message, UNICOAP_STATUS_CONTENT, buffer, nanocbor_encoded_len(&enc));
-    return unicoap_send_response(message, ctx);
+    return UNICOAP_STATUS_CHANGED;
 }
 
 UNICOAP_RESOURCE(netif_cbor) {
@@ -419,28 +422,81 @@ UNICOAP_RESOURCE(netif_cbor) {
   .methods = UNICOAP_METHODS(UNICOAP_METHOD_GET, UNICOAP_METHOD_PUT, UNICOAP_METHOD_POST, UNICOAP_METHOD_PATCH),
 };
 
+static int _netif_list(netif_t *iface, nanocbor_encoder_t *enc)
+{
+#ifdef MODULE_IPV6
+    ipv6_addr_t ipv6_addrs[CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF];
+    ipv6_addr_t ipv6_groups[GNRC_NETIF_IPV6_GROUPS_NUMOF];
+#endif
+    uint8_t hwaddr[GNRC_NETIF_L2ADDR_MAXLEN];
+    uint32_t u32;
+    uint16_t u16;
+    int16_t i16;
+    uint8_t u8;
+    int res;
 
-// static void _netif_list(netif_t *iface)
-// {
-// #ifdef MODULE_IPV6
-//     ipv6_addr_t ipv6_addrs[CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF];
-//     ipv6_addr_t ipv6_groups[GNRC_NETIF_IPV6_GROUPS_NUMOF];
-// #endif
-// #if IS_USED(MODULE_SHELL_CMD_GNRC_NETIF_LORA)
-//     res = netif_get_opt(iface, NETOPT_BANDWIDTH, 0, &u8, sizeof(u8));
-//     if (res >= 0) {
-//         printf(" BW: %skHz ", _netopt_bandwidth_str[u8]);
-//     }
-//     res = netif_get_opt(iface, NETOPT_SPREADING_FACTOR, 0, &u8, sizeof(u8));
-//     if (res >= 0) {
-//         printf(" SF: %u ", u8);
-//     }
-//     res = netif_get_opt(iface, NETOPT_CODING_RATE, 0, &u8, sizeof(u8));
-//     if (res >= 0) {
-//         printf(" CR: %s ", _netopt_coding_rate_str[u8]);
-//     }
-// #endif /* MODULE_SHELL_CMD_GNRC_NETIF_LORA */
-// #ifdef MODULE_NETDEV_IEEE802154
+    if (iface == NULL) {
+        return -ENODEV;
+    }
+
+    assert(nanocbor_fmt_array_indefinite(enc) > 0);
+
+    char name[CONFIG_NETIF_NAMELENMAX];
+
+    netif_get_name(iface, name);
+
+    /* 20 as name, self choosen */
+    assert(nanocbor_fmt_tag(enc, 20) > 0);
+    /* safe: netif_get_name promises to be null terminated */
+    assert(nanocbor_put_tstr(enc, name) == NANOCBOR_OK);
+
+    // res = netif_get_opt(iface, NETOPT_ADDRESS, 0, hwaddr, sizeof(hwaddr));
+    // if (res >= 0) {
+    //     char hwaddr_str[res * 3];
+    //     printf(" HWaddr: %s ",
+    //            l2util_addr_to_str(hwaddr, res, hwaddr_str));
+    // }
+    res = netif_get_opt(iface, NETOPT_CHANNEL, 0, &u16, sizeof(u16));
+    if (res >= 0) {
+        assert(nanocbor_fmt_tag(enc, 304) > 0);
+        assert(nanocbor_fmt_uint(enc, u16) > 0);
+    }
+    res = netif_get_opt(iface, NETOPT_CHANNEL_FREQUENCY, 0, &u32, sizeof(u32));
+    if (res >= 0) {
+        assert(nanocbor_fmt_tag(enc, 305) > 0);
+        assert(nanocbor_fmt_uint(enc, u32) > 0);
+    }
+    res = netif_get_opt(iface, NETOPT_CHANNEL_PAGE, 0, &u16, sizeof(u16));
+    if (res >= 0) {
+        assert(nanocbor_fmt_tag(enc, 306) > 0);
+        assert(nanocbor_fmt_uint(enc, u16) > 0);
+    }
+    res = netif_get_opt(iface, NETOPT_NID, 0, &u16, sizeof(u16));
+    if (res >= 0) {
+        assert(nanocbor_fmt_tag(enc, 307) > 0);
+        assert(nanocbor_fmt_uint(enc, u16) > 0);
+    }
+    res = netif_get_opt(iface, NETOPT_RSSI, 0, &i16, sizeof(i16));
+    if (res >= 0) {
+        assert(nanocbor_fmt_tag(enc, 308) > 0);
+        assert(nanocbor_fmt_int(enc, i16) > 0);
+    }
+
+#if IS_USED(MODULE_SHELL_CMD_GNRC_NETIF_LORA)
+    // res = netif_get_opt(iface, NETOPT_BANDWIDTH, 0, &u8, sizeof(u8));
+    // if (res >= 0) {
+    //     printf(" BW: %skHz ", _netopt_bandwidth_str[u8]);
+    // }
+    // res = netif_get_opt(iface, NETOPT_SPREADING_FACTOR, 0, &u8, sizeof(u8));
+    // if (res >= 0) {
+    //     printf(" SF: %u ", u8);
+    // }
+    // res = netif_get_opt(iface, NETOPT_CODING_RATE, 0, &u8, sizeof(u8));
+    // if (res >= 0) {
+    //     printf(" CR: %s ", _netopt_coding_rate_str[u8]);
+    // }
+#endif /* MODULE_SHELL_CMD_GNRC_NETIF_LORA */
+#ifdef MODULE_NETDEV_IEEE802154
 //     res = netif_get_opt(iface, NETOPT_IEEE802154_PHY, 0, &u8, sizeof(u8));
 //     if (res >= 0) {
 //         printf(" PHY: %s ", _netopt_ieee802154_phy_str[u8]);
@@ -521,27 +577,97 @@ UNICOAP_RESOURCE(netif_cbor) {
 // #endif /* MODULE_NETDEV_IEEE802154_MR_FSK */
 //         }
 //     }
-// #endif /* MODULE_NETDEV_IEEE802154 */
-// #if IS_USED(MODULE_LWIP_NETIF) /* only supported on lwIP for now */
-//     res = netif_get_opt(iface, NETOPT_ACTIVE, 0, &enabled, sizeof(enabled));
-//     if (res >= 0) {
-//         printf(" State: %s ", (enabled == NETOPT_ENABLE) ? "up" : "down" );
-//     }
-// #endif /* MODULE_LWIP_NETIF */
-// #if IS_USED(MODULE_SHELL_CMD_GNRC_NETIF_LORAWAN)
-//     res = netif_get_opt(iface, NETOPT_DEMOD_MARGIN, 0, &u8, sizeof(u8));
-//     if (res >= 0) {
-//         printf(" Demod margin.: %u ", (unsigned)u8);
-//         line_thresh++;
-//     }
-//     res = netif_get_opt(iface, NETOPT_NUM_GATEWAYS, 0, &u8, sizeof(u8));
-//     if (res >= 0) {
-//         printf(" Num gateways.: %u ", (unsigned)u8);
-//         line_thresh++;
-//     }
-// #endif
-    
-// #ifdef MODULE_GNRC_IPV6
+#endif /* MODULE_NETDEV_IEEE802154 */
+    netopt_enable_t enabled;
+    res = netif_get_opt(iface, NETOPT_LINK, 0, &enabled, sizeof(enabled));
+    if (res >= 0) {
+        // 303
+        assert(nanocbor_fmt_tag(enc, 309) > 0);
+        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
+    }
+#if IS_USED(MODULE_LWIP_NETIF) /* only supported on lwIP for now */
+    // res = netif_get_opt(iface, NETOPT_ACTIVE, 0, &enabled, sizeof(enabled));
+    // if (res >= 0) {
+    //     printf(" State: %s ", (enabled == NETOPT_ENABLE) ? "up" : "down" );
+    // }
+#endif /* MODULE_LWIP_NETIF */
+    res = netif_get_opt(iface, NETOPT_ADDRESS_LONG, 0, hwaddr, sizeof(hwaddr));
+    if (res >= 0) {
+        /* 48 is set by iana as IEEE MAC, RFC9542 */
+        assert(nanocbor_fmt_tag(enc, 48) > 0);
+        assert(nanocbor_put_bstr(enc, hwaddr, sizeof(hwaddr)) == NANOCBOR_OK);
+    }
+    res = netif_get_opt(iface, NETOPT_TX_POWER, 0, &i16, sizeof(i16));
+    if (res >= 0) {
+        assert(nanocbor_fmt_tag(enc, 310) > 0);
+        assert(nanocbor_fmt_int(enc, i16) > 0);
+    }
+    netopt_state_t state;
+    res = netif_get_opt(iface, NETOPT_STATE, 0, &state, sizeof(state));
+    if (res >= 0) {
+        assert(nanocbor_fmt_tag(enc, 311) > 0);
+        assert(nanocbor_fmt_int(enc, state) > 0);
+    }
+    res = netif_get_opt(iface, NETOPT_RETRANS, 0, &u8, sizeof(u8));
+    if (res >= 0) {
+        assert(nanocbor_fmt_tag(enc, 312) > 0);
+        assert(nanocbor_fmt_uint(enc, u8) > 0);
+    }
+    res = netif_get_opt(iface, NETOPT_CSMA_RETRIES, 0, &u8, sizeof(u8));
+    if (res >= 0) {
+        enabled = NETOPT_DISABLE;
+        res = netif_get_opt(iface, NETOPT_CSMA, 0, &enabled, sizeof(enabled));
+        if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
+            assert(nanocbor_fmt_tag(enc, 313) > 0);
+            assert(nanocbor_fmt_uint(enc, u8) > 0);
+        }
+    }
+#if IS_USED(MODULE_SHELL_CMD_GNRC_NETIF_LORAWAN)
+    // res = netif_get_opt(iface, NETOPT_DEMOD_MARGIN, 0, &u8, sizeof(u8));
+    // if (res >= 0) {
+    //     printf(" Demod margin.: %u ", (unsigned)u8);
+    //     line_thresh++;
+    // }
+    // res = netif_get_opt(iface, NETOPT_NUM_GATEWAYS, 0, &u8, sizeof(u8));
+    // if (res >= 0) {
+    //     printf(" Num gateways.: %u ", (unsigned)u8);
+    //     line_thresh++;
+    // }
+#endif
+    /* XXX divide options and flags by at least two spaces! */
+    // line_thresh = _newline(0U, line_thresh);
+    // line_thresh = _netif_list_flag(iface, NETOPT_PROMISCUOUSMODE, "PROMISC  ",
+    //                                line_thresh);
+    // line_thresh = _netif_list_flag(iface, NETOPT_AUTOACK, "AUTOACK  ",
+    //                                line_thresh);
+    // line_thresh = _netif_list_flag(iface, NETOPT_ACK_REQ, "ACK_REQ  ",
+    //                                line_thresh);
+    // line_thresh = _netif_list_flag(iface, NETOPT_PRELOADING, "PRELOAD  ",
+    //                                line_thresh);
+    // line_thresh = _netif_list_flag(iface, NETOPT_RAWMODE, "RAWMODE  ",
+    //                                line_thresh);
+    // line_thresh = _netif_list_flag(iface, NETOPT_MAC_NO_SLEEP, "MAC_NO_SLEEP  ",
+    //                                line_thresh);
+    // line_thresh = _netif_list_flag(iface, NETOPT_CSMA, "CSMA  ",
+    //                                line_thresh);
+    // line_thresh += _LINE_THRESHOLD + 1; /* enforce linebreak after this option */
+    // line_thresh = _netif_list_flag(iface, NETOPT_AUTOCCA, "AUTOCCA  ",
+    //                                line_thresh);
+    // line_thresh = _netif_list_flag(iface, NETOPT_IQ_INVERT, "IQ_INVERT  ",
+    //                                line_thresh);
+    // line_thresh = _netif_list_flag(iface, NETOPT_SINGLE_RECEIVE, "RX_SINGLE  ",
+    //                                line_thresh);
+    // line_thresh = _netif_list_flag(iface, NETOPT_CHANNEL_HOP, "CHAN_HOP  ",
+    //                                line_thresh);
+    // line_thresh = _netif_list_flag(iface, NETOPT_OTAA, "OTAA  ",
+    //                                line_thresh);
+    /* XXX divide options and flags by at least two spaces! */
+    // res = netif_get_opt(iface, NETOPT_MAX_PDU_SIZE, 0, &u16, sizeof(u16));
+    // if (res > 0) {
+    //     printf("L2-PDU:%" PRIu16 "  ", u16);
+    //     line_thresh++;
+    // }
+#ifdef MODULE_GNRC_IPV6
 //     res = netif_get_opt(iface, NETOPT_MAX_PDU_SIZE, GNRC_NETTYPE_IPV6, &u16, sizeof(u16));
 //     if (res > 0) {
 //         printf("MTU:%" PRIu16 "  ", u16);
@@ -570,8 +696,53 @@ UNICOAP_RESOURCE(netif_cbor) {
 //     line_thresh = _netif_list_flag(iface, NETOPT_6LO_IPHC, "IPHC  ",
 //                                    line_thresh);
 // #endif
-// #endif
-// #ifdef MODULE_L2FILTER
+#endif
+    // res = netif_get_opt(iface, NETOPT_SRC_LEN, 0, &u16, sizeof(u16));
+    // /* XXX divide options and flags by at least two spaces before this line! */
+    // if (res >= 0) {
+    //     printf("Source address length: %" PRIu16, u16);
+    //     line_thresh++;
+    // }
+    /* 302 as wired/wireless, self choosen */
+    assert(nanocbor_fmt_tag(enc, 302) > 0);
+    bool is_wired = netif_get_opt(iface, NETOPT_IS_WIRED, 0, NULL, 0) > 0;
+    assert(nanocbor_fmt_bool(enc,is_wired ) > 0);
+#ifdef MODULE_IPV6
+    res = netif_get_opt(iface, NETOPT_IPV6_ADDR, 0, ipv6_addrs,
+                        sizeof(ipv6_addrs));
+    if (res >= 0) {
+        // uint8_t ipv6_addrs_flags[CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF];
+        // memset(ipv6_addrs_flags, 0, sizeof(ipv6_addrs_flags));
+
+        /* assume it to succeed (otherwise array will stay 0) */
+        /* netif_get_opt(iface, NETOPT_IPV6_ADDR_FLAGS, 0, ipv6_addrs_flags,
+                      sizeof(ipv6_addrs_flags)); */
+        /* yes, the res of NETOPT_IPV6_ADDR is meant to be here ;-) */
+        for (unsigned i = 0; i < (res / sizeof(ipv6_addr_t)); i++) {
+            /* 54 is set by iana as IPv6, RFC9164 */
+            assert(nanocbor_fmt_tag(enc, 54) > 0);
+            assert(sizeof(ipv6_addr_t) == 16);
+            assert(nanocbor_put_bstr(enc, (uint8_t *) &ipv6_addrs[i], 16) == NANOCBOR_OK);
+            /* TODO _netif_list_ipv6(&ipv6_addrs[i], ipv6_addrs_flags[i]); */
+        }
+    }
+    res = netif_get_opt(iface, NETOPT_IPV6_GROUP, 0, ipv6_groups,
+                        sizeof(ipv6_groups));
+    if (res >= 0) {
+        for (unsigned i = 0; i < (res / sizeof(ipv6_addr_t)); i++) {
+            /* 54 is set by iana as IPv6, RFC9164 */
+            assert(nanocbor_fmt_tag(enc, 54) > 0);
+            assert(nanocbor_fmt_array(enc, 2) > 0);
+            /* Prefix, todo */
+            assert(nanocbor_fmt_int(enc, 128) > 0);
+
+            assert(sizeof(ipv6_addr_t) == 16);
+            assert(nanocbor_put_bstr(enc, (uint8_t *) &ipv6_groups[i], 16) == NANOCBOR_OK);
+        }
+    }
+#endif
+
+#ifdef MODULE_L2FILTER
 //     l2filter_t *filter = NULL;
 //     res = netif_get_opt(iface, NETOPT_L2FILTER, 0, &filter, sizeof(filter));
 //     if (res > 0) {
@@ -593,14 +764,15 @@ UNICOAP_RESOURCE(netif_cbor) {
 //             printf("            --- none ---\n");
 //         }
 //     }
-// #endif
+#endif
 
-// #ifdef MODULE_NETSTATS_L2
-//     puts("");
-//     _netif_stats(iface, NETSTATS_LAYER2, false);
-// #endif
-// #ifdef MODULE_NETSTATS_IPV6
-//     _netif_stats(iface, NETSTATS_IPV6, false);
-// #endif
-//     puts("");
-// }
+#ifdef MODULE_NETSTATS_L2
+    // puts("");
+    // _netif_stats(iface, NETSTATS_LAYER2, false);
+#endif
+#ifdef MODULE_NETSTATS_IPV6
+    // _netif_stats(iface, NETSTATS_IPV6, false);
+#endif
+    assert(nanocbor_fmt_end_indefinite(enc) > 0);
+    return 0;
+}
