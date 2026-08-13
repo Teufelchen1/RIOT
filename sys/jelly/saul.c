@@ -176,8 +176,9 @@ int _saul_handler(unicoap_message_t* message, const unicoap_aux_t* aux,
     return UNICOAP_STATUS_CHANGED;
 }
 
-UNICOAP_RESOURCE(saul_cbor) { \
+UNICOAP_RESOURCE(saul_cbor) {
     .path = UNICOAP_PATH("jelly", "saul"),
     .methods = UNICOAP_METHODS(UNICOAP_METHOD_GET, UNICOAP_METHOD_PUT, UNICOAP_METHOD_POST, UNICOAP_METHOD_PATCH),
-    .handler = _saul_handler,\
+    .handler = _saul_handler,
+    .protocols = UNICOAP_PROTOCOLS(UNICOAP_PROTO_SLIPMUX),
 };
