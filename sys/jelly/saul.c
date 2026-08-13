@@ -3,7 +3,7 @@
 #include "saul_reg.h"
 #include "senml/saul.h"
 #include "nanocbor/nanocbor.h"
-#include "net/nanocoap.h"
+#include "net/unicoap.h"
 
 static const char *_devname(saul_reg_t *dev) {
     if (dev->name == NULL) {
@@ -82,43 +82,34 @@ static int _reg_write(int num, int data_src)
 static int _convert_errorno_to_coap_code(int num)
 {
     switch (num) {
+    case -EINVAL:
+        return UNICOAP_STATUS_UNPROCESSABLE_ENTITY;
+    case -EBADMSG:
+        return UNICOAP_STATUS_BAD_REQUEST;
     case -ECANCELED:
     case -EIO:
-        return COAP_CODE_INTERNAL_SERVER_ERROR;
+        return UNICOAP_STATUS_INTERNAL_SERVER_ERROR;
     case -ENODEV:
-        return COAP_CODE_404;
+        return UNICOAP_STATUS_PATH_NOT_FOUND;
     case -ENOTSUP:
-        return COAP_CODE_METHOD_NOT_ALLOWED;
+        return UNICOAP_STATUS_METHOD_NOT_ALLOWED;
     default:
         if (num < 0) {
-            return COAP_CODE_INTERNAL_SERVER_ERROR;
+            return UNICOAP_STATUS_INTERNAL_SERVER_ERROR;
         } 
-        return COAP_CODE_CONTENT;
+        return UNICOAP_STATUS_CONTENT;
     }
 }
 
-static ssize_t _coap_bad_request(coap_pkt_t *pkt, uint8_t *buf, size_t len)
+int _saul_handler(unicoap_message_t* message, const unicoap_aux_t* aux,
+    unicoap_request_context_t* ctx, void* arg)
 {
-    return coap_reply_simple(pkt, COAP_CODE_BAD_REQUEST, buf, len,
-                    COAP_FORMAT_NONE, NULL, 0);
-}
+    (void) arg;
+    (void) aux;
 
-static ssize_t _coap_unprocessable_entity(coap_pkt_t *pkt, uint8_t *buf, size_t len)
-{
-    return coap_reply_simple(pkt, COAP_CODE_UNPROCESSABLE_ENTITY, buf, len,
-                    COAP_FORMAT_NONE, NULL, 0);
-}
+    uint8_t *payload = unicoap_message_payload_get(message);
+    size_t payload_len = unicoap_message_payload_get_size(message);
 
-static ssize_t _coap_internal_server_error(coap_pkt_t *pkt, uint8_t *buf, size_t len)
-{
-    return coap_reply_simple(pkt, COAP_CODE_INTERNAL_SERVER_ERROR, buf, len,
-                    COAP_FORMAT_NONE, NULL, 0);
-}
-
-ssize_t _saul_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len,
-                                  coap_request_ctx_t *context)
-{
-    (void) context;
     uint8_t buffer[200];
 
     nanocbor_encoder_t enc;
@@ -126,119 +117,67 @@ ssize_t _saul_handler(coap_pkt_t *pkt, uint8_t *buf, size_t len,
 
     nanocbor_value_t decoder;
     nanocbor_value_t array;
+    nanocbor_decoder_init(&decoder, payload, payload_len);
 
-    nanocbor_decoder_init(&decoder, pkt->payload, pkt->payload_len);
-
-    switch (coap_get_code_raw(pkt)) {
+    switch (unicoap_request_get_method(message)) {
     default:
-    case COAP_GET:
+    case UNICOAP_METHOD_GET:
         if(nanocbor_enter_array(&decoder, &array) == NANOCBOR_OK) {
             uint8_t id = 0;
             if (nanocbor_fmt_array_indefinite(&enc) <= 0) {
-                return _coap_internal_server_error(pkt, buf, len);
+                return UNICOAP_STATUS_BAD_REQUEST;
             }
             while (!nanocbor_at_end(&array)) {
                 if (nanocbor_get_uint8(&array, &id) < 0) {
-                    return _coap_unprocessable_entity(pkt, buf, len);
+                    return UNICOAP_STATUS_BAD_REQUEST;
                 }
                 int ret = _reg_read(id, &enc);
                 if (ret < 0) {
-                    int coap_code = _convert_errorno_to_coap_code(ret);
-                    return coap_reply_simple(pkt, coap_code, buf, len,
-                        COAP_FORMAT_NONE, NULL, 0);
+                    return _convert_errorno_to_coap_code(ret);
                 }
             }
             if (nanocbor_fmt_end_indefinite(&enc) <= 0) {
-                return _coap_internal_server_error(pkt, buf, len);
+                return UNICOAP_STATUS_BAD_REQUEST;
             }
         } else {
             _list(&enc);
         }
-        break;
-    case COAP_PUT:
-    case COAP_POST:
+
+        UNICOAP_OPTIONS_ALLOC(options, 2);
+
+        if (unicoap_options_set_content_format(&options, UNICOAP_FORMAT_CBOR) < 0) {
+            return UNICOAP_STATUS_INTERNAL_SERVER_ERROR;
+        }
+
+        unicoap_response_init_with_options(message, UNICOAP_STATUS_CONTENT, buffer, nanocbor_encoded_len(&enc), &options);
+        return unicoap_send_response(message, ctx);
+    case UNICOAP_METHOD_PUT:
+    case UNICOAP_METHOD_POST:
+    case UNICOAP_METHOD_PATCH:
         if(nanocbor_enter_array(&decoder, &array) == NANOCBOR_OK) {
             uint8_t id = 0;
             if (nanocbor_get_uint8(&array, &id) < 0) {
-                return _coap_unprocessable_entity(pkt, buf, len);
+                return UNICOAP_STATUS_BAD_REQUEST;
             }
             uint8_t data = 0;
             if (nanocbor_get_uint8(&array, &data) < 0) {
-                return _coap_unprocessable_entity(pkt, buf, len);
+                return UNICOAP_STATUS_BAD_REQUEST;
             }
             int ret = _reg_write(id, data);
             if (ret < 0) {
-                int coap_code = _convert_errorno_to_coap_code(ret);
-                return coap_reply_simple(pkt, coap_code, buf, len,
-                    COAP_FORMAT_NONE, NULL, 0);
+                return _convert_errorno_to_coap_code(ret);
             }
         } else {
-            return _coap_bad_request(pkt, buf, len);
+            return UNICOAP_STATUS_BAD_REQUEST;
         }
         break;
     }
-    return coap_reply_simple(pkt, COAP_CODE_205, buf, len,
-        COAP_FORMAT_SENML_CBOR, buffer, nanocbor_encoded_len(&enc));
+
+    return UNICOAP_STATUS_CHANGED;
 }
 
-    
-
-//     uint8_t command = 0;
-//     if (nanocbor_get_uint8(&array, &command) < 0) {
-//         return coap_reply_simple(pkt, COAP_CODE_UNPROCESSABLE_ENTITY, buf, len,
-//             COAP_FORMAT_NONE, NULL, 0);
-//     }
-
-//     if (command == 0) {
-//         _list(&enc);
-//     } else {
-//         uint8_t id = 0;
-//         if (nanocbor_get_uint8(&array, &id) < 0) {
-//             return coap_reply_simple(pkt, COAP_CODE_UNPROCESSABLE_ENTITY, buf, len,
-//                 COAP_FORMAT_NONE, NULL, 0);
-//         }
-//         if (command == 1) {
-//             // Read!
-//             int ret = _reg_read(id, &enc);
-//             if (ret == -ENODEV) {
-//                 return coap_reply_simple(pkt, COAP_CODE_BAD_REQUEST, buf, len,
-//                     COAP_FORMAT_NONE, NULL, 0);
-//             }
-//             if (ret == -EIO) {
-//                 return coap_reply_simple(pkt, COAP_CODE_INTERNAL_SERVER_ERROR, buf, len,
-//                     COAP_FORMAT_NONE, NULL, 0);
-//             }
-//         }
-//         if (command == 2) {
-//             // Write!
-//             uint8_t data = 0;
-//             if (nanocbor_get_uint8(&array, &data) < 0) {
-//                 return coap_reply_simple(pkt, COAP_CODE_UNPROCESSABLE_ENTITY, buf, len,
-//                     COAP_FORMAT_NONE, NULL, 0);
-//             }
-//             int ret = _reg_write(id, data);
-//             if (ret == -ENODEV) {
-//                 return coap_reply_simple(pkt, COAP_CODE_BAD_REQUEST, buf, len,
-//                     COAP_FORMAT_NONE, NULL, 0);
-//             }
-//              if (ret == -ENOTSUP) {
-//                 return coap_reply_simple(pkt, COAP_CODE_METHOD_NOT_ALLOWED, buf, len,
-//                     COAP_FORMAT_NONE, NULL, 0);
-//             }
-//             if (ret == -EIO) {
-//                 return coap_reply_simple(pkt, COAP_CODE_INTERNAL_SERVER_ERROR, buf, len,
-//                     COAP_FORMAT_NONE, NULL, 0);
-//             }
-//         }
-//     }
-
-//     return coap_reply_simple(pkt, COAP_CODE_205, buf, len,
-//         COAP_FORMAT_CBOR, buffer, nanocbor_encoded_len(&enc));
-// }
-
-NANOCOAP_RESOURCE(saul_cbor) { \
-    .path = "/jelly/Saul", \
-    .methods = COAP_GET | COAP_POST | COAP_PUT, \
-    .handler = _saul_handler, \
-    .context = NULL \
+UNICOAP_RESOURCE(saul_cbor) { \
+    .path = UNICOAP_PATH("jelly", "saul"),
+    .methods = UNICOAP_METHODS(UNICOAP_METHOD_GET, UNICOAP_METHOD_PUT, UNICOAP_METHOD_POST, UNICOAP_METHOD_PATCH),
+    .handler = _saul_handler,\
 };
