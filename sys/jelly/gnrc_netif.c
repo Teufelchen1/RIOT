@@ -244,6 +244,7 @@ UNICOAP_RESOURCE(netif_cbor) {
   .path = UNICOAP_PATH("jelly", "netif"),
   .handler = _gnrc_netif_handler,
   .methods = UNICOAP_METHODS(UNICOAP_METHOD_GET, UNICOAP_METHOD_PUT, UNICOAP_METHOD_POST, UNICOAP_METHOD_PATCH),
+  .protocols = UNICOAP_PROTOCOLS(UNICOAP_PROTO_SLIPMUX),
 };
 
 static int _netif_list(netif_t *iface, nanocbor_encoder_t *enc)
