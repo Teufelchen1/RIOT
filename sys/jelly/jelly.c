@@ -25,10 +25,16 @@ static int _riot_board_handler(
     return unicoap_send_response(message, ctx);
 }
 
-UNICOAP_RESOURCE(riot_version) { \
-    .path = UNICOAP_PATH("jelly", "ver"), .methods = UNICOAP_METHODS(UNICOAP_METHOD_GET), .handler = _riot_version_handler,\
+UNICOAP_RESOURCE(riot_version) {
+    .path = UNICOAP_PATH("jelly", "ver"),
+    .methods = UNICOAP_METHODS(UNICOAP_METHOD_GET),
+    .handler = _riot_version_handler,
+    .protocols = UNICOAP_PROTOCOLS(UNICOAP_PROTO_SLIPMUX),
 };
 
-UNICOAP_RESOURCE(riot_board) { \
-    .path = UNICOAP_PATH("jelly", "board"), .methods = UNICOAP_METHODS(UNICOAP_METHOD_GET), .handler = _riot_board_handler,\
+UNICOAP_RESOURCE(riot_board) {
+    .path = UNICOAP_PATH("jelly", "board"),
+    .methods = UNICOAP_METHODS(UNICOAP_METHOD_GET),
+    .handler = _riot_board_handler,
+    .protocols = UNICOAP_PROTOCOLS(UNICOAP_PROTO_SLIPMUX, UNICOAP_PROTO_UDP),
 };
