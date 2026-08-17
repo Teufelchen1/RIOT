@@ -36,19 +36,6 @@ static int _get_netif_from_cbor(nanocbor_value_t *decoder, netif_t **iface)
     return 1;
 }
 
-static int _get_ipv6_from_cbor(nanocbor_value_t *decoder, ipv6_addr_t **ipv6_buffer)
-{
-    size_t ipv6_buffer_len;
-    if (nanocbor_get_bstr(decoder, (const uint8_t **) ipv6_buffer, &ipv6_buffer_len) != NANOCBOR_OK) {
-        return -EBADMSG;
-    }
-    if (ipv6_buffer_len != 16) {
-        return -EINVAL;
-    }
-
-    return 1;
-}
-
 static int _tag303(nanocbor_value_t *decoder, netif_t *netif, unicoap_method_t method)
 {
     if (method == UNICOAP_METHOD_PATCH) {
@@ -69,6 +56,19 @@ static int _tag303(nanocbor_value_t *decoder, netif_t *netif, unicoap_method_t m
     } else {
         return -EINVAL;
     }
+    return 1;
+}
+
+static int _get_ipv6_from_cbor(nanocbor_value_t *decoder, ipv6_addr_t **ipv6_buffer)
+{
+    size_t ipv6_buffer_len;
+    if (nanocbor_get_bstr(decoder, (const uint8_t **) ipv6_buffer, &ipv6_buffer_len) != NANOCBOR_OK) {
+        return -EBADMSG;
+    }
+    if (ipv6_buffer_len != 16) {
+        return -EINVAL;
+    }
+
     return 1;
 }
 
@@ -322,86 +322,90 @@ static int _netif_list(netif_t *iface, nanocbor_encoder_t *enc)
     // }
 #endif /* MODULE_SHELL_CMD_GNRC_NETIF_LORA */
 #ifdef MODULE_NETDEV_IEEE802154
-//     res = netif_get_opt(iface, NETOPT_IEEE802154_PHY, 0, &u8, sizeof(u8));
-//     if (res >= 0) {
-//         printf(" PHY: %s ", _netopt_ieee802154_phy_str[u8]);
-//         switch (u8) {
+    res = netif_get_opt(iface, NETOPT_IEEE802154_PHY, 0, &u8, sizeof(u8));
+    if (res >= 0) {
+        assert(nanocbor_fmt_tag(enc, 325) > 0);
+        assert(nanocbor_fmt_array_indefinite(enc) > 0);
 
-// #ifdef MODULE_NETDEV_IEEE802154_OQPSK
-//         case IEEE802154_PHY_OQPSK:
-//             printf("\n          ");
-//             res = netif_get_opt(iface, NETOPT_OQPSK_RATE, 0, &u8, sizeof(u8));
-//             if (res >= 0 && u8) {
-//                 printf(" high data rate: %d ", u8);
-//             }
+        assert(nanocbor_fmt_tag(enc, 314) > 0);
+        assert(nanocbor_fmt_uint(enc, u8) > 0);
+        switch (u8) {
 
-//             break;
+#ifdef MODULE_NETDEV_IEEE802154_OQPSK
+        case IEEE802154_PHY_OQPSK:
+            res = netif_get_opt(iface, NETOPT_OQPSK_RATE, 0, &u8, sizeof(u8));
+            if (res >= 0 && u8) {
+                assert(nanocbor_fmt_tag(enc, 315) > 0);
+                assert(nanocbor_fmt_uint(enc, u8) > 0);
+            }
 
-// #endif /* MODULE_NETDEV_IEEE802154_OQPSK */
-// #ifdef MODULE_NETDEV_IEEE802154_MR_OQPSK
-//         case IEEE802154_PHY_MR_OQPSK:
-//             printf("\n          ");
-//             res = netif_get_opt(iface, NETOPT_MR_OQPSK_CHIPS, 0, &u16, sizeof(u16));
-//             if (res >= 0) {
-//                 printf(" chip rate: %u ", u16);
-//             }
-//             res = netif_get_opt(iface, NETOPT_MR_OQPSK_RATE, 0, &u8, sizeof(u8));
-//             if (res >= 0) {
-//                 printf(" rate mode: %d ", u8);
-//             }
+            break;
 
-//             break;
+#endif /* MODULE_NETDEV_IEEE802154_OQPSK */
+#ifdef MODULE_NETDEV_IEEE802154_MR_OQPSK
+        case IEEE802154_PHY_MR_OQPSK:
+            res = netif_get_opt(iface, NETOPT_MR_OQPSK_CHIPS, 0, &u16, sizeof(u16));
+            if (res >= 0) {
+                assert(nanocbor_fmt_tag(enc, 316) > 0);
+                assert(nanocbor_fmt_uint(enc, u16) > 0);
+            }
+            res = netif_get_opt(iface, NETOPT_MR_OQPSK_RATE, 0, &u8, sizeof(u8));
+            if (res >= 0) {
+                assert(nanocbor_fmt_tag(enc, 317) > 0);
+                assert(nanocbor_fmt_uint(enc, u8) > 0);
+            }
 
-// #endif /* MODULE_NETDEV_IEEE802154_MR_OQPSK */
-// #ifdef MODULE_NETDEV_IEEE802154_MR_OFDM
-//         case IEEE802154_PHY_MR_OFDM:
-//             printf("\n          ");
-//             res = netif_get_opt(iface, NETOPT_MR_OFDM_OPTION, 0, &u8, sizeof(u8));
-//             if (res >= 0) {
-//                 printf(" Option: %u ", u8);
-//             }
-//             res = netif_get_opt(iface, NETOPT_MR_OFDM_MCS, 0, &u8, sizeof(u8));
-//             if (res >= 0) {
-//                 printf(" MCS: %u (%s) ", u8, _netopt_ofdm_mcs_str[u8]);
-//             }
+            break;
 
-//             break;
-// #endif /* MODULE_NETDEV_IEEE802154_MR_OFDM */
-// #ifdef MODULE_NETDEV_IEEE802154_MR_FSK
-//         case IEEE802154_PHY_MR_FSK:
-//             printf("\n          ");
-//             res = netif_get_opt(iface, NETOPT_MR_FSK_MODULATION_INDEX, 0, &u8, sizeof(u8));
-//             if (res >= 0) {
-//                 hwaddr[0] = 64; /* convenient temp var */
-//                 frac_short(&u8, hwaddr);
-//                 if (hwaddr[0] == 1) {
-//                     printf(" modulation index: %u ", u8);
-//                 }
-//                 else {
-//                     printf(" modulation index: %u/%u ", u8, hwaddr[0]);
-//                 }
-//             }
-//             res = netif_get_opt(iface, NETOPT_MR_FSK_MODULATION_ORDER, 0, &u8, sizeof(u8));
-//             if (res >= 0) {
-//                 printf(" %u-FSK ", u8);
-//             }
-//             res = netif_get_opt(iface, NETOPT_MR_FSK_SRATE, 0, &u16, sizeof(u16));
-//             if (res >= 0) {
-//                 printf(" symbol rate: %u kHz ", u16);
-//             }
-//             res = netif_get_opt(iface, NETOPT_MR_FSK_FEC, 0, &u8, sizeof(u8));
-//             if (res >= 0) {
-//                 printf(" FEC: %s ", _netopt_fec_str[u8]);
-//             }
-//             res = netif_get_opt(iface, NETOPT_CHANNEL_SPACING, 0, &u16, sizeof(u16));
-//             if (res >= 0) {
-//                 printf(" BW: %ukHz ", u16);
-//             }
+#endif /* MODULE_NETDEV_IEEE802154_MR_OQPSK */
+#ifdef MODULE_NETDEV_IEEE802154_MR_OFDM
+        case IEEE802154_PHY_MR_OFDM:
+            res = netif_get_opt(iface, NETOPT_MR_OFDM_OPTION, 0, &u8, sizeof(u8));
+            if (res >= 0) {
+                assert(nanocbor_fmt_tag(enc, 318) > 0);
+                assert(nanocbor_fmt_uint(enc, u8) > 0);
+            }
+            res = netif_get_opt(iface, NETOPT_MR_OFDM_MCS, 0, &u8, sizeof(u8));
+            if (res >= 0) {
+                assert(nanocbor_fmt_tag(enc, 319) > 0);
+                assert(nanocbor_fmt_uint(enc, u8) > 0);
+            }
 
-//             break;
-// #endif /* MODULE_NETDEV_IEEE802154_MR_FSK */
-//         }
-//     }
+            break;
+#endif /* MODULE_NETDEV_IEEE802154_MR_OFDM */
+#ifdef MODULE_NETDEV_IEEE802154_MR_FSK
+        case IEEE802154_PHY_MR_FSK:
+            res = netif_get_opt(iface, NETOPT_MR_FSK_MODULATION_INDEX, 0, &u8, sizeof(u8));
+            if (res >= 0) {
+                assert(nanocbor_fmt_tag(enc, 320) > 0);
+                assert(nanocbor_fmt_uint(enc, u8) > 0);
+            }
+            res = netif_get_opt(iface, NETOPT_MR_FSK_MODULATION_ORDER, 0, &u8, sizeof(u8));
+            if (res >= 0) {
+                assert(nanocbor_fmt_tag(enc, 321) > 0);
+                assert(nanocbor_fmt_uint(enc, u8) > 0);
+            }
+            res = netif_get_opt(iface, NETOPT_MR_FSK_SRATE, 0, &u16, sizeof(u16));
+            if (res >= 0) {
+                assert(nanocbor_fmt_tag(enc, 322) > 0);
+                assert(nanocbor_fmt_uint(enc, u16) > 0);
+            }
+            res = netif_get_opt(iface, NETOPT_MR_FSK_FEC, 0, &u8, sizeof(u8));
+            if (res >= 0) {
+                assert(nanocbor_fmt_tag(enc, 323) > 0);
+                assert(nanocbor_fmt_uint(enc, u8) > 0);
+            }
+            res = netif_get_opt(iface, NETOPT_CHANNEL_SPACING, 0, &u16, sizeof(u16));
+            if (res >= 0) {
+                assert(nanocbor_fmt_tag(enc, 324) > 0);
+                assert(nanocbor_fmt_uint(enc, u16) > 0);
+            }
+
+            break;
+#endif /* MODULE_NETDEV_IEEE802154_MR_FSK */
+        }
+        assert(nanocbor_fmt_end_indefinite(enc) > 0);
+    }
 #endif /* MODULE_NETDEV_IEEE802154 */
     netopt_enable_t enabled;
     res = netif_get_opt(iface, NETOPT_LINK, 0, &enabled, sizeof(enabled));
