@@ -173,7 +173,7 @@ int _gnrc_netif_handler(unicoap_message_t* message, const unicoap_aux_t* aux,
     uint8_t *payload = unicoap_message_payload_get(message);
     size_t payload_len = unicoap_message_payload_get_size(message);
 
-    uint8_t buffer[500];
+    uint8_t buffer[256];
 
     nanocbor_encoder_t enc;
     nanocbor_encoder_init(&enc, buffer, sizeof(buffer));
@@ -464,68 +464,132 @@ static int _netif_list(netif_t *iface, nanocbor_encoder_t *enc)
     // }
 #endif
     /* XXX divide options and flags by at least two spaces! */
-    // line_thresh = _newline(0U, line_thresh);
-    // line_thresh = _netif_list_flag(iface, NETOPT_PROMISCUOUSMODE, "PROMISC  ",
-    //                                line_thresh);
-    // line_thresh = _netif_list_flag(iface, NETOPT_AUTOACK, "AUTOACK  ",
-    //                                line_thresh);
-    // line_thresh = _netif_list_flag(iface, NETOPT_ACK_REQ, "ACK_REQ  ",
-    //                                line_thresh);
-    // line_thresh = _netif_list_flag(iface, NETOPT_PRELOADING, "PRELOAD  ",
-    //                                line_thresh);
-    // line_thresh = _netif_list_flag(iface, NETOPT_RAWMODE, "RAWMODE  ",
-    //                                line_thresh);
-    // line_thresh = _netif_list_flag(iface, NETOPT_MAC_NO_SLEEP, "MAC_NO_SLEEP  ",
-    //                                line_thresh);
-    // line_thresh = _netif_list_flag(iface, NETOPT_CSMA, "CSMA  ",
-    //                                line_thresh);
-    // line_thresh += _LINE_THRESHOLD + 1; /* enforce linebreak after this option */
-    // line_thresh = _netif_list_flag(iface, NETOPT_AUTOCCA, "AUTOCCA  ",
-    //                                line_thresh);
-    // line_thresh = _netif_list_flag(iface, NETOPT_IQ_INVERT, "IQ_INVERT  ",
-    //                                line_thresh);
-    // line_thresh = _netif_list_flag(iface, NETOPT_SINGLE_RECEIVE, "RX_SINGLE  ",
-    //                                line_thresh);
-    // line_thresh = _netif_list_flag(iface, NETOPT_CHANNEL_HOP, "CHAN_HOP  ",
-    //                                line_thresh);
-    // line_thresh = _netif_list_flag(iface, NETOPT_OTAA, "OTAA  ",
-    //                                line_thresh);
+    enabled = NETOPT_DISABLE;
+    res = netif_get_opt(iface, NETOPT_PROMISCUOUSMODE, 0, &enabled, sizeof(enabled));
+    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
+        assert(nanocbor_fmt_tag(enc, 326) > 0);
+        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
+    }
+    enabled = NETOPT_DISABLE;
+    res = netif_get_opt(iface, NETOPT_AUTOACK, 0, &enabled, sizeof(enabled));
+    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
+        assert(nanocbor_fmt_tag(enc, 327) > 0);
+        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
+    }
+    enabled = NETOPT_DISABLE;
+    res = netif_get_opt(iface, NETOPT_ACK_REQ, 0, &enabled, sizeof(enabled));
+    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
+        assert(nanocbor_fmt_tag(enc, 328) > 0);
+        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
+    }
+    enabled = NETOPT_DISABLE;
+    res = netif_get_opt(iface, NETOPT_PRELOADING, 0, &enabled, sizeof(enabled));
+    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
+        assert(nanocbor_fmt_tag(enc, 329) > 0);
+        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
+    }
+    enabled = NETOPT_DISABLE;
+    res = netif_get_opt(iface, NETOPT_RAWMODE, 0, &enabled, sizeof(enabled));
+    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
+        assert(nanocbor_fmt_tag(enc, 330) > 0);
+        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
+    }
+    enabled = NETOPT_DISABLE;
+    res = netif_get_opt(iface, NETOPT_MAC_NO_SLEEP, 0, &enabled, sizeof(enabled));
+    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
+        assert(nanocbor_fmt_tag(enc, 331) > 0);
+        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
+    }
+    enabled = NETOPT_DISABLE;
+    res = netif_get_opt(iface, NETOPT_CSMA, 0, &enabled, sizeof(enabled));
+    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
+        assert(nanocbor_fmt_tag(enc, 332) > 0);
+        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
+    }
+    enabled = NETOPT_DISABLE;
+    res = netif_get_opt(iface, NETOPT_AUTOCCA, 0, &enabled, sizeof(enabled));
+    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
+        assert(nanocbor_fmt_tag(enc, 333) > 0);
+        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
+    }
+    enabled = NETOPT_DISABLE;
+    res = netif_get_opt(iface, NETOPT_IQ_INVERT, 0, &enabled, sizeof(enabled));
+    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
+        assert(nanocbor_fmt_tag(enc, 334) > 0);
+        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
+    }
+    enabled = NETOPT_DISABLE;
+    res = netif_get_opt(iface, NETOPT_SINGLE_RECEIVE, 0, &enabled, sizeof(enabled));
+    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
+        assert(nanocbor_fmt_tag(enc, 335) > 0);
+        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
+    }
+    enabled = NETOPT_DISABLE;
+    res = netif_get_opt(iface, NETOPT_CHANNEL_HOP, 0, &enabled, sizeof(enabled));
+    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
+        assert(nanocbor_fmt_tag(enc, 336) > 0);
+        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
+    }
+    enabled = NETOPT_DISABLE;
+    res = netif_get_opt(iface, NETOPT_OTAA, 0, &enabled, sizeof(enabled));
+    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
+        assert(nanocbor_fmt_tag(enc, 337) > 0);
+        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
+    }
     /* XXX divide options and flags by at least two spaces! */
-    // res = netif_get_opt(iface, NETOPT_MAX_PDU_SIZE, 0, &u16, sizeof(u16));
-    // if (res > 0) {
-    //     printf("L2-PDU:%" PRIu16 "  ", u16);
-    //     line_thresh++;
-    // }
+    res = netif_get_opt(iface, NETOPT_MAX_PDU_SIZE, 0, &u16, sizeof(u16));
+    if (res >= 0) {
+        assert(nanocbor_fmt_tag(enc, 343) > 0);
+        assert(nanocbor_fmt_uint(enc, u16) > 0);
+    }
 #ifdef MODULE_GNRC_IPV6
-//     res = netif_get_opt(iface, NETOPT_MAX_PDU_SIZE, GNRC_NETTYPE_IPV6, &u16, sizeof(u16));
-//     if (res > 0) {
-//         printf("MTU:%" PRIu16 "  ", u16);
-//         line_thresh++;
-//     }
-//     res = netif_get_opt(iface, NETOPT_HOP_LIMIT, 0, &u8, sizeof(u8));
-//     if (res > 0) {
-//         printf("HL:%u  ", u8);
-//         line_thresh++;
-//     }
-//     line_thresh = _netif_list_flag(iface, NETOPT_IPV6_FORWARDING, "RTR  ",
-//                                    line_thresh);
-// #ifndef MODULE_GNRC_SIXLOWPAN_IPHC
-//     line_thresh += _LINE_THRESHOLD + 1; /* enforce linebreak after this option */
-// #endif
-//     line_thresh = _netif_list_flag(iface, NETOPT_IPV6_SND_RTR_ADV, "RTR_ADV  ",
-//                                    line_thresh);
-// #ifdef MODULE_GNRC_SIXLOWPAN
-//     line_thresh = _netif_list_flag(iface, NETOPT_6LO, "6LO  ", line_thresh);
-// #endif
-// #if CONFIG_GNRC_IPV6_NIB_6LBR
-//     line_thresh = _netif_list_flag(iface, NETOPT_6LO_ABR, "ABR  ", line_thresh);
-// #endif
-// #ifdef MODULE_GNRC_SIXLOWPAN_IPHC
-//     line_thresh += _LINE_THRESHOLD + 1; /* enforce linebreak after this option */
-//     line_thresh = _netif_list_flag(iface, NETOPT_6LO_IPHC, "IPHC  ",
-//                                    line_thresh);
-// #endif
+    res = netif_get_opt(iface, NETOPT_MAX_PDU_SIZE, GNRC_NETTYPE_IPV6, &u16, sizeof(u16));
+    if (res >= 0) {
+        assert(nanocbor_fmt_tag(enc, 344) > 0);
+        assert(nanocbor_fmt_uint(enc, u16) > 0);
+    }
+    res = netif_get_opt(iface, NETOPT_HOP_LIMIT, GNRC_NETTYPE_IPV6, &u8, sizeof(u8));
+    if (res >= 0) {
+        assert(nanocbor_fmt_tag(enc, 345) > 0);
+        assert(nanocbor_fmt_uint(enc, u8) > 0);
+    }
+    enabled = NETOPT_DISABLE;
+    res = netif_get_opt(iface, NETOPT_IPV6_FORWARDING, 0, &enabled, sizeof(enabled));
+    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
+        assert(nanocbor_fmt_tag(enc, 338) > 0);
+        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
+    }
+    enabled = NETOPT_DISABLE;
+    res = netif_get_opt(iface, NETOPT_IPV6_SND_RTR_ADV, 0, &enabled, sizeof(enabled));
+    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
+        assert(nanocbor_fmt_tag(enc, 339) > 0);
+        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
+    }
+#ifdef MODULE_GNRC_SIXLOWPAN
+    enabled = NETOPT_DISABLE;
+    res = netif_get_opt(iface, NETOPT_6LO, 0, &enabled, sizeof(enabled));
+    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
+        assert(nanocbor_fmt_tag(enc, 340) > 0);
+        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
+    }
 #endif
+#if CONFIG_GNRC_IPV6_NIB_6LBR
+    enabled = NETOPT_DISABLE;
+    res = netif_get_opt(iface, NETOPT_6LO_ABR, 0, &enabled, sizeof(enabled));
+    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
+        assert(nanocbor_fmt_tag(enc, 341) > 0);
+        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
+    }
+#endif
+#ifdef MODULE_GNRC_SIXLOWPAN_IPHC
+    enabled = NETOPT_DISABLE;
+    res = netif_get_opt(iface, NETOPT_6LO_IPHC, 0, &enabled, sizeof(enabled));
+    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
+        assert(nanocbor_fmt_tag(enc, 342) > 0);
+        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
+    }
+#endif
+#endif /* MODULE_GNRC_IPV6 */
     // res = netif_get_opt(iface, NETOPT_SRC_LEN, 0, &u16, sizeof(u16));
     // /* XXX divide options and flags by at least two spaces before this line! */
     // if (res >= 0) {
