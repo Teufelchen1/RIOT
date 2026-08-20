@@ -6,6 +6,83 @@
 #include "net/ipv6/addr.h"
 #include "net/unicoap.h"
 
+#define TAG_NETOPT_IS_WIRED 302
+#define TAG_NETOPT_CHANNEL 304
+#define TAG_NETOPT_CHANNEL_FREQUENCY 305
+#define TAG_NETOPT_CHANNEL_PAGE 306
+#define TAG_NETOPT_NID 307
+#define TAG_NETOPT_RSSI 308
+#define TAG_NETOPT_OQPSK_RATE 315
+#define TAG_NETOPT_MR_OQPSK_CHIPS 316
+#define TAG_NETOPT_MR_OQPSK_RATE 317
+#define TAG_NETOPT_MR_OFDM_OPTION 318
+#define TAG_NETOPT_MR_OFDM_MCS 319
+#define TAG_NETOPT_MR_FSK_MODULATION_INDEX 320
+#define TAG_NETOPT_MR_FSK_MODULATION_ORDER 321
+#define TAG_NETOPT_MR_FSK_SRATE 322
+#define TAG_NETOPT_MR_FSK_FEC 323
+#define TAG_NETOPT_CHANNEL_SPACING 324
+#define TAG_NETOPT_LINK 309 /* read + write */
+#define TAG_NETOPT_TX_POWER 310
+#define TAG_NETOPT_STATE 311
+#define TAG_NETOPT_RETRANS 312
+#define TAG_NETOPT_CSMA_RETRIES 313
+#define TAG_NETOPT_PROMISCUOUSMODE 326
+#define TAG_NETOPT_AUTOACK 327
+#define TAG_NETOPT_ACK_REQ 328
+#define TAG_NETOPT_PRELOADING 329
+#define TAG_NETOPT_RAWMODE 330
+#define TAG_NETOPT_MAC_NO_SLEEP 331
+#define TAG_NETOPT_CSMA 332
+#define TAG_NETOPT_AUTOCCA 333
+#define TAG_NETOPT_IQ_INVERT 334
+#define TAG_NETOPT_SINGLE_RECEIVE 335
+#define TAG_NETOPT_CHANNEL_HOP 336
+#define TAG_NETOPT_OTAA 337
+#define TAG_NETOPT_MAX_PDU_SIZE 343
+#define TAG_NETOPT_MAX_PDU_SIZE_IPV6 344
+#define TAG_NETOPT_HOP_LIMIT_IPV6 345
+#define TAG_NETOPT_IPV6_FORWARDING 338
+#define TAG_NETOPT_IPV6_SND_RTR_ADV 339
+#define TAG_NETOPT_6LO 340
+#define TAG_NETOPT_6LO_ABR 341
+#define TAG_NETOPT_6LO_IPHC 342
+#define TAG_NETOPT_SRC_LEN 346
+
+#define TAG_u32(enc, num, data) TAG_UINT(enc, num, data)
+#define TAG_u16(enc, num, data) TAG_UINT(enc, num, data)
+#define TAG_u8(enc, num, data) TAG_UINT(enc, num, data)
+#define TAG_i16(enc, num, data) TAG_INT(enc, num, data)
+#define TAG_enabled(enc, num, data) TAG_BOOL(enc, num, (data == NETOPT_ENABLE))
+#define TAG_state(enc, num, data) TAG_UINT(enc, num, data)
+
+#define CAT(A,B) CAT_(A,B)
+#define CAT_(A,B) A##B
+
+#define TAG_NUM(type) TAG_ ## type
+
+#define TAG(res, iface, enc, netopt, data) do {\
+    res = netif_get_opt(iface, netopt, 0, &data, sizeof(data));\
+    if (res >= 0) { \
+        CAT(TAG_, data)(enc, TAG_NUM(netopt), data); \
+    }\
+} while(0)
+
+#define TAG_UINT(encoder, number, payload) do {     \
+    assert(nanocbor_fmt_tag(encoder, number) > 0);  \
+    assert(nanocbor_fmt_uint(encoder, payload) > 0);\
+} while(0)
+
+#define TAG_INT(encoder, number, payload) do {     \
+    assert(nanocbor_fmt_tag(encoder, number) > 0); \
+    assert(nanocbor_fmt_int(encoder, payload) > 0);\
+} while(0)
+
+#define TAG_BOOL(encoder, number, payload) do {     \
+    assert(nanocbor_fmt_tag(encoder, number) > 0); \
+    assert(nanocbor_fmt_bool(encoder, payload) > 0);\
+} while(0)
+
 static int _netif_list(netif_t *iface, nanocbor_encoder_t *enc);
 
 static int _get_netif_from_cbor(nanocbor_value_t *decoder, netif_t **iface)
@@ -36,7 +113,7 @@ static int _get_netif_from_cbor(nanocbor_value_t *decoder, netif_t **iface)
     return 1;
 }
 
-static int _tag303(nanocbor_value_t *decoder, netif_t *netif, unicoap_method_t method)
+static int _set_link_up_down(nanocbor_value_t *decoder, netif_t *netif, unicoap_method_t method)
 {
     if (method == UNICOAP_METHOD_PATCH) {
         bool netopt_change = false;
@@ -201,8 +278,8 @@ int _gnrc_netif_handler(unicoap_message_t* message, const unicoap_aux_t* aux,
     }
 
     switch (tag) {
-    case 303:
-        if ((ret = _tag303(&array, netif, method)) < 0) {
+    case TAG_NETOPT_LINK:
+        if ((ret = _set_link_up_down(&array, netif, method)) < 0) {
             return unicoap_response_status_from_errno(ret);
         }
         break;
@@ -225,63 +302,7 @@ UNICOAP_RESOURCE(netif_cbor) {
   .protocols = UNICOAP_PROTOCOLS(UNICOAP_PROTO_SLIPMUX),
 };
 
-#define TAG_NETOPT_CHANNEL_NUM 304
-#define TAG_NETOPT_CHANNEL_TYP u16
-#define TAG_NETOPT_CHANNEL_FREQUENCY_NUM 305
-#define TAG_NETOPT_CHANNEL_FREQUENCY_TYP u32
-#define TAG_NETOPT_CHANNEL_PAGE_NUM 306
-#define TAG_NETOPT_CHANNEL_PAGE_TYP u16
-#define TAG_NETOPT_NID_NUM 307
-#define TAG_NETOPT_NID_TYP u16
-#define TAG_NETOPT_RSSI_NUM 308
-#define TAG_NETOPT_RSSI_TYP i16
-#define TAG_NETOPT_OQPSK_RATE_NUM 315
-#define TAG_NETOPT_OQPSK_RATE_TYP u8
-#define TAG_NETOPT_MR_OQPSK_CHIPS_NUM 316
-#define TAG_NETOPT_MR_OQPSK_CHIPS_TYP u16
-#define TAG_NETOPT_MR_OQPSK_RATE_NUM 317
-#define TAG_NETOPT_MR_OQPSK_RATE_TYP u8
-#define TAG_NETOPT_MR_OFDM_OPTION_NUM 318
-#define TAG_NETOPT_MR_OFDM_OPTION_TYP u8
-#define TAG_NETOPT_MR_OFDM_MCS_NUM 319
-#define TAG_NETOPT_MR_OFDM_MCS_TYP u8
-#define TAG_NETOPT_MR_FSK_MODULATION_INDEX_NUM 320
-#define TAG_NETOPT_MR_FSK_MODULATION_INDEX_TYP u8
-#define TAG_NETOPT_MR_FSK_MODULATION_ORDER_NUM 321
-#define TAG_NETOPT_MR_FSK_MODULATION_ORDER_TYP u8
-#define TAG_NETOPT_MR_FSK_SRATE_NUM 322
-#define TAG_NETOPT_MR_FSK_SRATE_TYP u16
-#define TAG_NETOPT_MR_FSK_FEC_NUM 323
-#define TAG_NETOPT_MR_FSK_FEC_TYP u8
-#define TAG_NETOPT_CHANNEL_SPACING_NUM 324
-#define TAG_NETOPT_CHANNEL_SPACING_TYP u16
 
-#define TAG_u32(enc, num, data) TAG_UINT(enc, num, data)
-#define TAG_u16(enc, num, data) TAG_UINT(enc, num, data)
-#define TAG_i16(enc, num, data) TAG_INT(enc, num, data)
-
-#define CAT(A,B) CAT_(A,B)
-#define CAT_(A,B) A##B
-
-#define TAG_NUM(type) TAG_ ## type ##_NUM
-#define TAG_TYP(type) TAG_ ## type ##_TYP
-
-#define TAG(res, iface, enc, netopt, data) do {\
-    res = netif_get_opt(iface, netopt, 0, &TAG_TYP(netopt), sizeof(TAG_TYP(netopt)));\
-    if (res >= 0) { \
-        CAT(TAG_, TAG_TYP(netopt))(enc, TAG_NUM(netopt), data); \
-    }\
-} while(0)
-
-#define TAG_UINT(encoder, number, payload) do {     \
-    assert(nanocbor_fmt_tag(encoder, number) > 0);  \
-    assert(nanocbor_fmt_uint(encoder, payload) > 0);\
-} while(0)
-
-#define TAG_INT(encoder, number, payload) do {     \
-    assert(nanocbor_fmt_tag(encoder, number) > 0); \
-    assert(nanocbor_fmt_int(encoder, payload) > 0);\
-} while(0)
 
 static int _netif_list(netif_t *iface, nanocbor_encoder_t *enc)
 {
@@ -294,6 +315,8 @@ static int _netif_list(netif_t *iface, nanocbor_encoder_t *enc)
     uint16_t u16;
     int16_t i16;
     uint8_t u8;
+    netopt_enable_t enabled;
+    netopt_state_t state;
     int res;
 
     if (iface == NULL) {
@@ -311,13 +334,17 @@ static int _netif_list(netif_t *iface, nanocbor_encoder_t *enc)
     /* safe: netif_get_name promises to be null terminated */
     assert(nanocbor_put_tstr(enc, name) == NANOCBOR_OK);
 
-    // res = netif_get_opt(iface, NETOPT_ADDRESS, 0, hwaddr, sizeof(hwaddr));
-    // if (res >= 0) {
-    //     char hwaddr_str[res * 3];
-    //     printf(" HWaddr: %s ",
-    //            l2util_addr_to_str(hwaddr, res, hwaddr_str));
-    // }
-    // res = netif_get_opt(iface, NETOPT_CHANNEL, 0, &u16, sizeof(u16));
+    res = netif_get_opt(iface, NETOPT_ADDRESS, 0, hwaddr, sizeof(hwaddr));
+    if (res > 0) {
+        assert(res <= sizeof(hwaddr));
+        if (res == 6) {
+            /* 48 is set by iana as IEEE MAC, RFC9542 */
+            assert(nanocbor_fmt_tag(enc, 48) > 0);
+            assert(nanocbor_put_bstr(enc, hwaddr, 6) == NANOCBOR_OK);
+        }
+    } else {
+        /* todo */
+    }
     TAG(res, iface, enc, NETOPT_CHANNEL, u16);   
     TAG(res, iface, enc, NETOPT_CHANNEL_FREQUENCY, u32);
     TAG(res, iface, enc, NETOPT_CHANNEL_PAGE, u16);
@@ -380,13 +407,7 @@ static int _netif_list(netif_t *iface, nanocbor_encoder_t *enc)
         assert(nanocbor_fmt_end_indefinite(enc) > 0);
     }
 #endif /* MODULE_NETDEV_IEEE802154 */
-    netopt_enable_t enabled;
-    res = netif_get_opt(iface, NETOPT_LINK, 0, &enabled, sizeof(enabled));
-    if (res >= 0) {
-        // 303
-        assert(nanocbor_fmt_tag(enc, 309) > 0);
-        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
-    }
+    TAG(res, iface, enc, NETOPT_LINK, enabled);
 #if IS_USED(MODULE_LWIP_NETIF) /* only supported on lwIP for now */
     // res = netif_get_opt(iface, NETOPT_ACTIVE, 0, &enabled, sizeof(enabled));
     // if (res >= 0) {
@@ -394,35 +415,19 @@ static int _netif_list(netif_t *iface, nanocbor_encoder_t *enc)
     // }
 #endif /* MODULE_LWIP_NETIF */
     res = netif_get_opt(iface, NETOPT_ADDRESS_LONG, 0, hwaddr, sizeof(hwaddr));
-    if (res >= 0) {
-        /* 48 is set by iana as IEEE MAC, RFC9542 */
+    if (res == 8) {
+        /* 48 is set by iana as IEEE EUI, RFC9542 */
         assert(nanocbor_fmt_tag(enc, 48) > 0);
+        assert(8 <= sizeof(hwaddr));
         assert(nanocbor_put_bstr(enc, hwaddr, sizeof(hwaddr)) == NANOCBOR_OK);
     }
-    res = netif_get_opt(iface, NETOPT_TX_POWER, 0, &i16, sizeof(i16));
-    if (res >= 0) {
-        assert(nanocbor_fmt_tag(enc, 310) > 0);
-        assert(nanocbor_fmt_int(enc, i16) > 0);
-    }
-    netopt_state_t state;
-    res = netif_get_opt(iface, NETOPT_STATE, 0, &state, sizeof(state));
-    if (res >= 0) {
-        assert(nanocbor_fmt_tag(enc, 311) > 0);
-        assert(nanocbor_fmt_int(enc, state) > 0);
-    }
-    res = netif_get_opt(iface, NETOPT_RETRANS, 0, &u8, sizeof(u8));
-    if (res >= 0) {
-        assert(nanocbor_fmt_tag(enc, 312) > 0);
-        assert(nanocbor_fmt_uint(enc, u8) > 0);
-    }
-    res = netif_get_opt(iface, NETOPT_CSMA_RETRIES, 0, &u8, sizeof(u8));
-    if (res >= 0) {
-        enabled = NETOPT_DISABLE;
-        res = netif_get_opt(iface, NETOPT_CSMA, 0, &enabled, sizeof(enabled));
-        if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
-            assert(nanocbor_fmt_tag(enc, 313) > 0);
-            assert(nanocbor_fmt_uint(enc, u8) > 0);
-        }
+    TAG(res, iface, enc, NETOPT_TX_POWER, i16);
+    TAG(res, iface, enc, NETOPT_STATE, state);
+    TAG(res, iface, enc, NETOPT_RETRANS, u8);
+    enabled = NETOPT_DISABLE;
+    res = netif_get_opt(iface, NETOPT_CSMA, 0, &enabled, sizeof(enabled));
+    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
+        TAG(res, iface, enc, NETOPT_CSMA_RETRIES, u8);
     }
 #if IS_USED(MODULE_SHELL_CMD_GNRC_NETIF_LORAWAN)
     // res = netif_get_opt(iface, NETOPT_DEMOD_MARGIN, 0, &u8, sizeof(u8));
@@ -436,143 +441,61 @@ static int _netif_list(netif_t *iface, nanocbor_encoder_t *enc)
     //     line_thresh++;
     // }
 #endif
-    /* XXX divide options and flags by at least two spaces! */
     enabled = NETOPT_DISABLE;
-    res = netif_get_opt(iface, NETOPT_PROMISCUOUSMODE, 0, &enabled, sizeof(enabled));
-    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
-        assert(nanocbor_fmt_tag(enc, 326) > 0);
-        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
-    }
+    TAG(res, iface, enc, NETOPT_PROMISCUOUSMODE, enabled);
     enabled = NETOPT_DISABLE;
-    res = netif_get_opt(iface, NETOPT_AUTOACK, 0, &enabled, sizeof(enabled));
-    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
-        assert(nanocbor_fmt_tag(enc, 327) > 0);
-        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
-    }
+    TAG(res, iface, enc, NETOPT_AUTOACK, enabled);
     enabled = NETOPT_DISABLE;
-    res = netif_get_opt(iface, NETOPT_ACK_REQ, 0, &enabled, sizeof(enabled));
-    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
-        assert(nanocbor_fmt_tag(enc, 328) > 0);
-        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
-    }
+    TAG(res, iface, enc, NETOPT_ACK_REQ, enabled);
     enabled = NETOPT_DISABLE;
-    res = netif_get_opt(iface, NETOPT_PRELOADING, 0, &enabled, sizeof(enabled));
-    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
-        assert(nanocbor_fmt_tag(enc, 329) > 0);
-        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
-    }
+    TAG(res, iface, enc, NETOPT_PRELOADING, enabled);
     enabled = NETOPT_DISABLE;
-    res = netif_get_opt(iface, NETOPT_RAWMODE, 0, &enabled, sizeof(enabled));
-    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
-        assert(nanocbor_fmt_tag(enc, 330) > 0);
-        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
-    }
+    TAG(res, iface, enc, NETOPT_RAWMODE, enabled);
     enabled = NETOPT_DISABLE;
-    res = netif_get_opt(iface, NETOPT_MAC_NO_SLEEP, 0, &enabled, sizeof(enabled));
-    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
-        assert(nanocbor_fmt_tag(enc, 331) > 0);
-        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
-    }
+    TAG(res, iface, enc, NETOPT_MAC_NO_SLEEP, enabled);
     enabled = NETOPT_DISABLE;
-    res = netif_get_opt(iface, NETOPT_CSMA, 0, &enabled, sizeof(enabled));
-    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
-        assert(nanocbor_fmt_tag(enc, 332) > 0);
-        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
-    }
+    TAG(res, iface, enc, NETOPT_CSMA, enabled);
     enabled = NETOPT_DISABLE;
-    res = netif_get_opt(iface, NETOPT_AUTOCCA, 0, &enabled, sizeof(enabled));
-    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
-        assert(nanocbor_fmt_tag(enc, 333) > 0);
-        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
-    }
+    TAG(res, iface, enc, NETOPT_AUTOCCA, enabled);
     enabled = NETOPT_DISABLE;
-    res = netif_get_opt(iface, NETOPT_IQ_INVERT, 0, &enabled, sizeof(enabled));
-    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
-        assert(nanocbor_fmt_tag(enc, 334) > 0);
-        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
-    }
+    TAG(res, iface, enc, NETOPT_IQ_INVERT, enabled);
     enabled = NETOPT_DISABLE;
-    res = netif_get_opt(iface, NETOPT_SINGLE_RECEIVE, 0, &enabled, sizeof(enabled));
-    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
-        assert(nanocbor_fmt_tag(enc, 335) > 0);
-        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
-    }
+    TAG(res, iface, enc, NETOPT_SINGLE_RECEIVE, enabled);
     enabled = NETOPT_DISABLE;
-    res = netif_get_opt(iface, NETOPT_CHANNEL_HOP, 0, &enabled, sizeof(enabled));
-    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
-        assert(nanocbor_fmt_tag(enc, 336) > 0);
-        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
-    }
+    TAG(res, iface, enc, NETOPT_CHANNEL_HOP, enabled);
     enabled = NETOPT_DISABLE;
-    res = netif_get_opt(iface, NETOPT_OTAA, 0, &enabled, sizeof(enabled));
-    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
-        assert(nanocbor_fmt_tag(enc, 337) > 0);
-        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
-    }
-    /* XXX divide options and flags by at least two spaces! */
-    res = netif_get_opt(iface, NETOPT_MAX_PDU_SIZE, 0, &u16, sizeof(u16));
-    if (res >= 0) {
-        assert(nanocbor_fmt_tag(enc, 343) > 0);
-        assert(nanocbor_fmt_uint(enc, u16) > 0);
-    }
+    TAG(res, iface, enc, NETOPT_OTAA, enabled);
+    TAG(res, iface, enc, NETOPT_MAX_PDU_SIZE, u16);
 #ifdef MODULE_GNRC_IPV6
     res = netif_get_opt(iface, NETOPT_MAX_PDU_SIZE, GNRC_NETTYPE_IPV6, &u16, sizeof(u16));
     if (res >= 0) {
-        assert(nanocbor_fmt_tag(enc, 344) > 0);
-        assert(nanocbor_fmt_uint(enc, u16) > 0);
+        TAG_UINT(enc, TAG_NETOPT_MAX_PDU_SIZE_IPV6, u16);
     }
     res = netif_get_opt(iface, NETOPT_HOP_LIMIT, GNRC_NETTYPE_IPV6, &u8, sizeof(u8));
     if (res >= 0) {
-        assert(nanocbor_fmt_tag(enc, 345) > 0);
-        assert(nanocbor_fmt_uint(enc, u8) > 0);
+        TAG_UINT(enc, TAG_NETOPT_HOP_LIMIT_IPV6, u8);
     }
     enabled = NETOPT_DISABLE;
-    res = netif_get_opt(iface, NETOPT_IPV6_FORWARDING, 0, &enabled, sizeof(enabled));
-    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
-        assert(nanocbor_fmt_tag(enc, 338) > 0);
-        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
-    }
+    TAG(res, iface, enc, NETOPT_IPV6_FORWARDING, enabled);
     enabled = NETOPT_DISABLE;
-    res = netif_get_opt(iface, NETOPT_IPV6_SND_RTR_ADV, 0, &enabled, sizeof(enabled));
-    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
-        assert(nanocbor_fmt_tag(enc, 339) > 0);
-        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
-    }
+    TAG(res, iface, enc, NETOPT_IPV6_SND_RTR_ADV, enabled);
 #ifdef MODULE_GNRC_SIXLOWPAN
     enabled = NETOPT_DISABLE;
-    res = netif_get_opt(iface, NETOPT_6LO, 0, &enabled, sizeof(enabled));
-    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
-        assert(nanocbor_fmt_tag(enc, 340) > 0);
-        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
-    }
+    TAG(res, iface, enc, NETOPT_6LO, enabled);
 #endif
 #if CONFIG_GNRC_IPV6_NIB_6LBR
     enabled = NETOPT_DISABLE;
-    res = netif_get_opt(iface, NETOPT_6LO_ABR, 0, &enabled, sizeof(enabled));
-    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
-        assert(nanocbor_fmt_tag(enc, 341) > 0);
-        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
-    }
+    TAG(res, iface, enc, NETOPT_6LO_ABR, enabled);
 #endif
 #ifdef MODULE_GNRC_SIXLOWPAN_IPHC
     enabled = NETOPT_DISABLE;
-    res = netif_get_opt(iface, NETOPT_6LO_IPHC, 0, &enabled, sizeof(enabled));
-    if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
-        assert(nanocbor_fmt_tag(enc, 342) > 0);
-        assert(nanocbor_fmt_bool(enc, (enabled == NETOPT_ENABLE)) > 0);
-    }
+    TAG(res, iface, enc, NETOPT_6LO_IPHC, enabled);
 #endif
 #endif /* MODULE_GNRC_IPV6 */
-    // res = netif_get_opt(iface, NETOPT_SRC_LEN, 0, &u16, sizeof(u16));
-    // /* XXX divide options and flags by at least two spaces before this line! */
-    // if (res >= 0) {
-    //     printf("Source address length: %" PRIu16, u16);
-    //     line_thresh++;
-    // }
-    /* 302 as wired/wireless, self choosen */
-    assert(nanocbor_fmt_tag(enc, 302) > 0);
-    bool is_wired = netif_get_opt(iface, NETOPT_IS_WIRED, 0, NULL, 0) > 0;
-    assert(nanocbor_fmt_bool(enc,is_wired ) > 0);
+
+    TAG(res, iface, enc, NETOPT_SRC_LEN, u16);
+    TAG_BOOL(enc, TAG_NETOPT_IS_WIRED, netif_get_opt(iface, NETOPT_IS_WIRED, 0, NULL, 0) > 0);
+
 #ifdef MODULE_IPV6
     res = netif_get_opt(iface, NETOPT_IPV6_ADDR, 0, ipv6_addrs,
                         sizeof(ipv6_addrs));
@@ -633,7 +556,6 @@ static int _netif_list(netif_t *iface, nanocbor_encoder_t *enc)
 #endif
 
 #ifdef MODULE_NETSTATS_L2
-    // puts("");
     // _netif_stats(iface, NETSTATS_LAYER2, false);
 #endif
 #ifdef MODULE_NETSTATS_IPV6
