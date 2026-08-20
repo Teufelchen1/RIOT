@@ -85,33 +85,33 @@
 
 static int _netif_list(netif_t *iface, nanocbor_encoder_t *enc);
 
-static int _get_netif_from_cbor(nanocbor_value_t *decoder, netif_t **iface)
-{
-    uint32_t tag = 0;
+// static int _get_netif_from_cbor(nanocbor_value_t *decoder, netif_t **iface)
+// {
+//     uint32_t tag = 0;
 
-    if (nanocbor_get_tag(decoder, &tag) != NANOCBOR_OK) {
-        return -EBADMSG;
-    }
+//     if (nanocbor_get_tag(decoder, &tag) != NANOCBOR_OK) {
+//         return -EBADMSG;
+//     }
 
-    /* netifname is 20, self choosen */
-    if (tag != 20) {
-        return -EINVAL;
-    }
+//     /* netifname is 20, self choosen */
+//     if (tag != 20) {
+//         return -EINVAL;
+//     }
 
-    char *name_buf = NULL;
-    size_t name_len = 0;
+//     char *name_buf = NULL;
+//     size_t name_len = 0;
 
-    if (nanocbor_get_tstr(decoder, (const uint8_t **) &name_buf, &name_len) < 0) {
-        return -EBADMSG;
-    }
-    *iface = netif_get_by_name_buffer(name_buf, name_len);
+//     if (nanocbor_get_tstr(decoder, (const uint8_t **) &name_buf, &name_len) < 0) {
+//         return -EBADMSG;
+//     }
+//     *iface = netif_get_by_name_buffer(name_buf, name_len);
 
-    if (*iface == NULL) {
-        return -ENODEV;
-    }
+//     if (*iface == NULL) {
+//         return -ENODEV;
+//     }
 
-    return 1;
-}
+//     return 1;
+// }
 
 static int _set_link_up_down(nanocbor_value_t *decoder, netif_t *netif, unicoap_method_t method)
 {
@@ -196,7 +196,30 @@ static int _tag54(nanocbor_value_t *decoder, netif_t *netif, unicoap_method_t me
     return 1;
 }
 
-static void _list(nanocbor_encoder_t *enc)
+// static void _list(nanocbor_encoder_t *enc)
+// {
+//     assert(nanocbor_fmt_array_indefinite(enc) > 0);
+
+//     netif_t *last = NULL;
+
+//     /* Get interfaces in reverse order since the list is used like a stack.
+//      * Stop when first netif in list already has been listed. */
+//     while (last != netif_iter(NULL)) {
+//         netif_t *netif = NULL;
+//         netif_t *next = netif_iter(netif);
+//         /* Step until next is end of list or was previously listed. */
+//         do {
+//             netif = next;
+//             next = netif_iter(netif);
+//         } while (next && next != last);
+//         _netif_list(netif, enc);
+//         last = netif;
+//     }
+
+//     assert(nanocbor_fmt_end_indefinite(enc) > 0);
+// }
+
+static void _list_all_netif_names(nanocbor_encoder_t *enc)
 {
     assert(nanocbor_fmt_array_indefinite(enc) > 0);
 
@@ -212,7 +235,13 @@ static void _list(nanocbor_encoder_t *enc)
             netif = next;
             next = netif_iter(netif);
         } while (next && next != last);
-        _netif_list(netif, enc);
+
+        char name[CONFIG_NETIF_NAMELENMAX];
+        netif_get_name(netif, name);
+        /* 20 as name, self choosen */
+        assert(nanocbor_fmt_tag(enc, 20) > 0);
+        /* safe: netif_get_name promises to be null terminated */
+        assert(nanocbor_put_tstr(enc, name) == NANOCBOR_OK);
         last = netif;
     }
 
@@ -236,20 +265,34 @@ int _gnrc_netif_handler(unicoap_message_t* message, const unicoap_aux_t* aux,
     nanocbor_value_t decoder;
     nanocbor_decoder_init(&decoder, payload, payload_len);
 
+    const char* netif_name = NULL;
+    netif_t *netif = NULL;
+    int netif_name_length = 0;
+    if ((netif_name_length = unicoap_options_get_first_uri_query_by_name_string(message->options, "name", &netif_name)) > 0) {
+        netif = netif_get_by_name_buffer(netif_name, netif_name_length);
+        if (!netif)
+            return UNICOAP_STATUS_PATH_NOT_FOUND;
+    }
+
     unicoap_method_t method = unicoap_request_get_method(message);
     if (method == UNICOAP_METHOD_GET) {
-        if (nanocbor_get_type(&decoder) == NANOCBOR_TYPE_TAG) {
-            netif_t *netif = NULL;
-            int ret = _get_netif_from_cbor(&decoder, &netif);
-            if (ret < 0) {
-                return unicoap_response_status_from_errno(ret);
-            }
-
-            assert(nanocbor_fmt_array(&enc, 1) > 0);
+        if (netif) {
             _netif_list(netif, &enc);
         } else {
-            _list(&enc);
+            _list_all_netif_names(&enc);
         }
+        // if (nanocbor_get_type(&decoder) == NANOCBOR_TYPE_TAG) {
+        //     netif_t *netif = NULL;
+        //     int ret = _get_netif_from_cbor(&decoder, &netif);
+        //     if (ret < 0) {
+        //         return unicoap_response_status_from_errno(ret);
+        //     }
+
+        //     assert(nanocbor_fmt_array(&enc, 1) > 0);
+        //     _netif_list(netif, &enc);
+        // } else {
+        //     _list(&enc);
+        // }
 
         UNICOAP_OPTIONS_ALLOC(options, 2);
 
@@ -259,6 +302,9 @@ int _gnrc_netif_handler(unicoap_message_t* message, const unicoap_aux_t* aux,
 
         unicoap_response_init_with_options(message, UNICOAP_STATUS_CONTENT, buffer, nanocbor_encoded_len(&enc), &options);
         return unicoap_send_response(message, ctx);
+    } else {
+        if (!netif)
+            return UNICOAP_STATUS_BAD_REQUEST;
     }
 
     nanocbor_value_t array;
@@ -266,16 +312,18 @@ int _gnrc_netif_handler(unicoap_message_t* message, const unicoap_aux_t* aux,
         return UNICOAP_STATUS_BAD_REQUEST;
     }
 
-    netif_t *netif = NULL;
-    int ret = _get_netif_from_cbor(&array, &netif);
-    if (ret < 0) {
-        return unicoap_response_status_from_errno(ret);
-    }
+    // netif_t *netif = NULL;
+    // int ret = _get_netif_from_cbor(&array, &netif);
+    // if (ret < 0) {
+    //     return unicoap_response_status_from_errno(ret);
+    // }
 
     uint32_t tag = 0;
     if (nanocbor_get_tag(&array, &tag) != NANOCBOR_OK) {
         return UNICOAP_STATUS_BAD_REQUEST;
     }
+
+    int ret = 0;
 
     switch (tag) {
     case TAG_NETOPT_LINK:
@@ -302,13 +350,10 @@ UNICOAP_RESOURCE(netif_cbor) {
   .protocols = UNICOAP_PROTOCOLS(UNICOAP_PROTO_SLIPMUX),
 };
 
-
-
 static int _netif_list(netif_t *iface, nanocbor_encoder_t *enc)
 {
 #ifdef MODULE_IPV6
-    ipv6_addr_t ipv6_addrs[CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF];
-    ipv6_addr_t ipv6_groups[GNRC_NETIF_IPV6_GROUPS_NUMOF];
+    ipv6_addr_t ipv6_addrs[MAX(CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF, GNRC_NETIF_IPV6_GROUPS_NUMOF)];
 #endif
     uint8_t hwaddr[GNRC_NETIF_L2ADDR_MAXLEN];
     uint32_t u32;
@@ -336,7 +381,7 @@ static int _netif_list(netif_t *iface, nanocbor_encoder_t *enc)
 
     res = netif_get_opt(iface, NETOPT_ADDRESS, 0, hwaddr, sizeof(hwaddr));
     if (res > 0) {
-        assert(res <= sizeof(hwaddr));
+        assert((unsigned) res <= sizeof(hwaddr));
         if (res == 6) {
             /* 48 is set by iana as IEEE MAC, RFC9542 */
             assert(nanocbor_fmt_tag(enc, 48) > 0);
@@ -515,8 +560,8 @@ static int _netif_list(netif_t *iface, nanocbor_encoder_t *enc)
             /* TODO _netif_list_ipv6(&ipv6_addrs[i], ipv6_addrs_flags[i]); */
         }
     }
-    res = netif_get_opt(iface, NETOPT_IPV6_GROUP, 0, ipv6_groups,
-                        sizeof(ipv6_groups));
+    res = netif_get_opt(iface, NETOPT_IPV6_GROUP, 0, ipv6_addrs,
+                        sizeof(ipv6_addrs));
     if (res >= 0) {
         for (unsigned i = 0; i < (res / sizeof(ipv6_addr_t)); i++) {
             /* 54 is set by iana as IPv6, RFC9164 */
@@ -526,7 +571,7 @@ static int _netif_list(netif_t *iface, nanocbor_encoder_t *enc)
             assert(nanocbor_fmt_int(enc, 128) > 0);
 
             assert(sizeof(ipv6_addr_t) == 16);
-            assert(nanocbor_put_bstr(enc, (uint8_t *) &ipv6_groups[i], 16) == NANOCBOR_OK);
+            assert(nanocbor_put_bstr(enc, (uint8_t *) &ipv6_addrs[i], 16) == NANOCBOR_OK);
         }
     }
 #endif
