@@ -1,5 +1,6 @@
 USEPKG += nanocbor
 
+USEMODULE += unicoap_server
 USEMODULE += unicoap_server_resource_declarations
 USEMODULE += saul_default
 USEMODULE += senml_saul

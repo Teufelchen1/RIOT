@@ -9,8 +9,8 @@
 /* Self choosen */
 #define TAG_NETIF_NAME 20
 
-#define TAG_IEEE_MAC 48
-#define TAG_IPV6 54 /* read + write */
+#define TAG_IEEE_MAC 48 /* Choosen by IANA */
+#define TAG_IPV6 54 /* Choosen by IANA, read + write */
 
 #define TAG_NETOPT_IS_WIRED 302
 #define TAG_NETOPT_CHANNEL 304
@@ -80,6 +80,10 @@
 #define CAT_(A,B) A##B
 
 #define TAG_NUM(type) TAG_ ## type
+
+#define TAG_PRE_DISABLE(res, iface, enc, netopt, data) \
+    data = NETOPT_DISABLE;\
+    TAG(res, iface, enc, netopt, data)
 
 #define TAG(res, iface, enc, netopt, data) do {\
     res = netif_get_opt(iface, netopt, 0, &data, sizeof(data));\
@@ -430,7 +434,6 @@ static int _netif_list(netif_t *iface, nanocbor_encoder_t *enc)
     if (res == 8) {
         /* 48 is set by iana as IEEE EUI, RFC9542 */
         assert(nanocbor_fmt_tag(enc, TAG_IEEE_MAC) > 0);
-        assert(8 <= sizeof(hwaddr));
         assert(nanocbor_put_bstr(enc, hwaddr, sizeof(hwaddr)) == NANOCBOR_OK);
     }
     TAG(res, iface, enc, NETOPT_TX_POWER, i16);
@@ -441,30 +444,18 @@ static int _netif_list(netif_t *iface, nanocbor_encoder_t *enc)
     if ((res >= 0) && (enabled == NETOPT_ENABLE)) {
         TAG(res, iface, enc, NETOPT_CSMA_RETRIES, u8);
     }
-    enabled = NETOPT_DISABLE;
-    TAG(res, iface, enc, NETOPT_PROMISCUOUSMODE, enabled);
-    enabled = NETOPT_DISABLE;
-    TAG(res, iface, enc, NETOPT_AUTOACK, enabled);
-    enabled = NETOPT_DISABLE;
-    TAG(res, iface, enc, NETOPT_ACK_REQ, enabled);
-    enabled = NETOPT_DISABLE;
-    TAG(res, iface, enc, NETOPT_PRELOADING, enabled);
-    enabled = NETOPT_DISABLE;
-    TAG(res, iface, enc, NETOPT_RAWMODE, enabled);
-    enabled = NETOPT_DISABLE;
-    TAG(res, iface, enc, NETOPT_MAC_NO_SLEEP, enabled);
-    enabled = NETOPT_DISABLE;
-    TAG(res, iface, enc, NETOPT_CSMA, enabled);
-    enabled = NETOPT_DISABLE;
-    TAG(res, iface, enc, NETOPT_AUTOCCA, enabled);
-    enabled = NETOPT_DISABLE;
-    TAG(res, iface, enc, NETOPT_IQ_INVERT, enabled);
-    enabled = NETOPT_DISABLE;
-    TAG(res, iface, enc, NETOPT_SINGLE_RECEIVE, enabled);
-    enabled = NETOPT_DISABLE;
-    TAG(res, iface, enc, NETOPT_CHANNEL_HOP, enabled);
-    enabled = NETOPT_DISABLE;
-    TAG(res, iface, enc, NETOPT_OTAA, enabled);
+    TAG_PRE_DISABLE(res, iface, enc, NETOPT_PROMISCUOUSMODE, enabled);
+    TAG_PRE_DISABLE(res, iface, enc, NETOPT_AUTOACK, enabled);
+    TAG_PRE_DISABLE(res, iface, enc, NETOPT_ACK_REQ, enabled);
+    TAG_PRE_DISABLE(res, iface, enc, NETOPT_PRELOADING, enabled);
+    TAG_PRE_DISABLE(res, iface, enc, NETOPT_RAWMODE, enabled);
+    TAG_PRE_DISABLE(res, iface, enc, NETOPT_MAC_NO_SLEEP, enabled);
+    TAG_PRE_DISABLE(res, iface, enc, NETOPT_CSMA, enabled);
+    TAG_PRE_DISABLE(res, iface, enc, NETOPT_AUTOCCA, enabled);
+    TAG_PRE_DISABLE(res, iface, enc, NETOPT_IQ_INVERT, enabled);
+    TAG_PRE_DISABLE(res, iface, enc, NETOPT_SINGLE_RECEIVE, enabled);
+    TAG_PRE_DISABLE(res, iface, enc, NETOPT_CHANNEL_HOP, enabled);
+    TAG_PRE_DISABLE(res, iface, enc, NETOPT_OTAA, enabled);
     TAG(res, iface, enc, NETOPT_MAX_PDU_SIZE, u16);
 #ifdef MODULE_GNRC_IPV6
     res = netif_get_opt(iface, NETOPT_MAX_PDU_SIZE, GNRC_NETTYPE_IPV6, &u16, sizeof(u16));
@@ -475,21 +466,16 @@ static int _netif_list(netif_t *iface, nanocbor_encoder_t *enc)
     if (res >= 0) {
         TAG_UINT(enc, TAG_NETOPT_HOP_LIMIT_IPV6, u8);
     }
-    enabled = NETOPT_DISABLE;
-    TAG(res, iface, enc, NETOPT_IPV6_FORWARDING, enabled);
-    enabled = NETOPT_DISABLE;
-    TAG(res, iface, enc, NETOPT_IPV6_SND_RTR_ADV, enabled);
+    TAG_PRE_DISABLE(res, iface, enc, NETOPT_IPV6_FORWARDING, enabled);
+    TAG_PRE_DISABLE(res, iface, enc, NETOPT_IPV6_SND_RTR_ADV, enabled);
 #ifdef MODULE_GNRC_SIXLOWPAN
-    enabled = NETOPT_DISABLE;
-    TAG(res, iface, enc, NETOPT_6LO, enabled);
+    TAG_PRE_DISABLE(res, iface, enc, NETOPT_6LO, enabled);
 #endif
 #if CONFIG_GNRC_IPV6_NIB_6LBR
-    enabled = NETOPT_DISABLE;
-    TAG(res, iface, enc, NETOPT_6LO_ABR, enabled);
+    TAG_PRE_DISABLE(res, iface, enc, NETOPT_6LO_ABR, enabled);
 #endif
 #ifdef MODULE_GNRC_SIXLOWPAN_IPHC
-    enabled = NETOPT_DISABLE;
-    TAG(res, iface, enc, NETOPT_6LO_IPHC, enabled);
+    TAG_PRE_DISABLE(res, iface, enc, NETOPT_6LO_IPHC, enabled);
 #endif
 #endif /* MODULE_GNRC_IPV6 */
 
