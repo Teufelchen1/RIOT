@@ -18,6 +18,7 @@
 #define TAG_NETOPT_CHANNEL_PAGE 306
 #define TAG_NETOPT_NID 307
 #define TAG_NETOPT_RSSI 308
+#define TAG_NETOPT_CCA_THRESHOLD 354
 
 /* 802.15.4 is contained in an extra array */
 #define TAG_IEEE802154_ARRAY 325
@@ -53,7 +54,7 @@
 #define TAG_NETOPT_OTAA 337
 #define TAG_NETOPT_MAX_PDU_SIZE 343
 #define TAG_NETOPT_MAX_PDU_SIZE_IPV6 344
-#define TAG_NETOPT_HOP_LIMIT_IPV6 345
+#define TAG_NETOPT_HOP_LIMIT 345
 #define TAG_NETOPT_IPV6_FORWARDING 338
 #define TAG_NETOPT_IPV6_SND_RTR_ADV 339
 #define TAG_NETOPT_6LO 340
@@ -81,12 +82,12 @@
 
 #define TAG_NUM(type) TAG_ ## type
 
-#define TAG_PRE_DISABLE(res, iface, enc, netopt, data) \
+#define TAG_PRE_DISABLE(res, netif, enc, netopt, data) \
     data = NETOPT_DISABLE;\
-    TAG(res, iface, enc, netopt, data)
+    TAG(res, netif, enc, netopt, data)
 
-#define TAG(res, iface, enc, netopt, data) do {\
-    res = netif_get_opt(iface, netopt, 0, &data, sizeof(data));\
+#define TAG(res, netif, enc, netopt, data) do {\
+    res = netif_get_opt(netif, netopt, 0, &data, sizeof(data));\
     if (res >= 0) { \
         CAT(TAG_, data)(enc, TAG_NUM(netopt), data); \
     }\
@@ -107,7 +108,22 @@
     assert(nanocbor_fmt_bool(encoder, payload) > 0);\
 } while(0)
 
-static int _netif_list(netif_t *iface, nanocbor_encoder_t *enc);
+
+#define GET_u8(dec, data) nanocbor_get_uint8(dec, &data) < 0
+#define GET_u16(dec, data) nanocbor_get_uint16(dec, &data) < 0
+#define GET_i16(dec, data) nanocbor_get_int16(dec, &data) < 0
+
+#define SET(ret, netif, dec, netopt, data) \
+    case TAG_NUM(netopt):\
+        if (CAT(GET_, data)(dec, data)) { \
+            return UNICOAP_STATUS_BAD_REQUEST; \
+        } \
+        if ((ret = netif_set_opt(netif, netopt, 0, &data, sizeof(data))) < 0) { \
+            return unicoap_response_status_from_errno(ret); \
+        }\
+        break
+
+static void _netif_list(netif_t *iface, nanocbor_encoder_t *enc);
 
 static int _set_link_up_down(nanocbor_value_t *decoder, netif_t *netif, unicoap_method_t method)
 {
@@ -192,6 +208,149 @@ static int _set_ipv6(nanocbor_value_t *decoder, netif_t *netif, unicoap_method_t
     return 1;
 }
 
+static unicoap_status_t _gnrc_netif_set(uint32_t tag, nanocbor_value_t *cbor_value, netif_t *netif, unicoap_method_t method)
+{
+    //uint32_t u32;
+    uint16_t u16;
+    int16_t i16;
+    uint8_t u8;
+    int ret = 0;
+
+    switch (tag) {
+    case TAG_NETOPT_LINK:
+        if ((ret = _set_link_up_down(cbor_value, netif, method)) < 0) {
+            return unicoap_response_status_from_errno(ret);
+        }
+        break;
+    case TAG_IPV6:
+        if ((ret = _set_ipv6(cbor_value, netif, method)) < 0) {
+            return unicoap_response_status_from_errno(ret);
+        }
+        break;
+//     if ((strcmp("addr", key) == 0) || (strcmp("addr_short", key) == 0)) {
+//         return _netif_set_addr(iface, NETOPT_ADDRESS, value);
+//     }
+    case TAG_IEEE_MAC:
+        const uint8_t * hwaddr = NULL;
+        size_t len = 0;
+        if (nanocbor_get_bstr(cbor_value, &hwaddr, &len) != NANOCBOR_OK) {
+            return UNICOAP_STATUS_BAD_REQUEST;
+        }
+        if ((ret = netif_set_opt(netif, NETOPT_ADDRESS_LONG, 0, (void *)hwaddr, len)) < 0) {
+            return unicoap_response_status_from_errno(ret);
+        }
+        break;
+    SET(ret, netif, cbor_value, NETOPT_CCA_THRESHOLD, u8);
+    SET(ret, netif, cbor_value, NETOPT_CHANNEL_FREQUENCY, u8);
+#if IS_USED(MODULE_SHELL_CMD_GNRC_NETIF_LORA)
+    // else if ((strcmp("bandwidth", key) == 0) || (strcmp("bw", key) == 0)) {
+    //     return _netif_set_bandwidth(iface, value);
+    // }
+    SET(ret, netif, cbor_value, NETOPT_SPREADING_FACTOR, u8);
+    // else if ((strcmp("coding_rate", key) == 0) || (strcmp("cr", key) == 0)) {
+    //     return _netif_set_coding_rate(iface, value);
+    // }
+#endif  /* MODULE_SHELL_CMD_GNRC_NETIF_LORA */
+// #if IS_USED(MODULE_SHELL_CMD_GNRC_NETIF_LORAWAN)
+// #if IS_USED(MODULE_GNRC_LORAWAN_1_1)
+//     else if (strcmp("joineui", key) == 0) {
+//         return _netif_set_lw_key(iface, NETOPT_LORAWAN_JOINEUI, value);
+//     }
+//     else if (strcmp("fnwksintkey", key) == 0) {
+//         return _netif_set_lw_key(iface, NETOPT_LORAWAN_FNWKSINTKEY, value);
+//     }
+//     else if (strcmp("snwksintkey", key) == 0) {
+//         return _netif_set_lw_key(iface, NETOPT_LORAWAN_SNWKSINTKEY, value);
+//     }
+//     else if (strcmp("nwksenckey", key) == 0) {
+//         return _netif_set_lw_key(iface, NETOPT_LORAWAN_NWKSENCKEY, value);
+//     }
+//     else if (strcmp("nwkkey", key) == 0) {
+//         return _netif_set_lw_key(iface, NETOPT_LORAWAN_NWKKEY, value);
+//     }
+// #else
+//     else if (strcmp("appeui", key) == 0) {
+//         return _netif_set_lw_key(iface, NETOPT_LORAWAN_APPEUI, value);
+//     }
+//     else if (strcmp("nwkskey", key) == 0) {
+//         return _netif_set_addr(iface, NETOPT_LORAWAN_NWKSKEY, value);
+//     }
+// #endif /* IS_USED(MODULE_GNRC_LORAWAN_1_1) */
+//     else if (strcmp("appskey", key) == 0) {
+//         return _netif_set_addr(iface, NETOPT_LORAWAN_APPSKEY, value);
+//     }
+//     else if (strcmp("appkey", key) == 0) {
+//         return _netif_set_lw_key(iface, NETOPT_LORAWAN_APPKEY, value);
+//     }
+//     else if (strcmp("deveui", key) == 0) {
+//         return _netif_set_addr(iface, NETOPT_ADDRESS_LONG, value);
+//     }
+
+//     else if (strcmp("dr", key) == 0) {
+//         return _netif_set_u8(iface, NETOPT_LORAWAN_DR, 0, value);
+//     }
+//     else if (strcmp("rx2_dr", key) == 0) {
+//         return _netif_set_u8(iface, NETOPT_LORAWAN_RX2_DR, 0, value);
+//     }
+// #endif /* MODULE_SHELL_CMD_GNRC_NETIF_LORAWAN */
+// #ifdef MODULE_NETDEV_IEEE802154_MULTIMODE
+//     else if ((strcmp("phy_mode", key) == 0) || (strcmp("phy", key) == 0)) {
+//         return _netif_set_ieee802154_phy_mode(iface, value);
+//     }
+// #endif /* MODULE_NETDEV_IEEE802154_MULTIMODE */
+#ifdef MODULE_NETDEV_IEEE802154_OQPSK
+    SET(ret, netif, cbor_value, NETOPT_OQPSK_RATE, u8);
+#endif /* MODULE_NETDEV_IEEE802154_OQPSK */
+#ifdef MODULE_NETDEV_IEEE802154_MR_OQPSK
+    SET(ret, netif, cbor_value, NETOPT_MR_OQPSK_CHIPS, u16);
+    SET(ret, netif, cbor_value, NETOPT_MR_OQPSK_RATE, u8);
+#endif /* MODULE_NETDEV_IEEE802154_MR_OQPSK */
+#ifdef MODULE_NETDEV_IEEE802154_MR_OFDM
+    SET(ret, netif, cbor_value, NETOPT_MR_OFDM_OPTION, u8);
+    SET(ret, netif, cbor_value, NETOPT_MR_OFDM_MCS, u8);
+#endif /* MODULE_NETDEV_IEEE802154_MR_OFDM */
+#ifdef MODULE_NETDEV_IEEE802154_MR_FSK
+//     else if ((strcmp("modulation_index", key) == 0) || (strcmp("midx", key) == 0)) {
+//         return _netif_set_fsk_modulation_index(iface, value);
+//     }
+    SET(ret, netif, cbor_value, NETOPT_MR_FSK_MODULATION_ORDER, u8);
+    SET(ret, netif, cbor_value, NETOPT_MR_FSK_SRATE, u16);
+//     else if ((strcmp("forward_error_correction", key) == 0) || (strcmp("fec", key) == 0)) {
+//         return _netif_set_fsk_fec(iface, value);
+//     }
+    SET(ret, netif, cbor_value, NETOPT_CHANNEL_SPACING, u16);
+#endif /* MODULE_NETDEV_IEEE802154_MR_FSK */
+    SET(ret, netif, cbor_value, NETOPT_CHANNEL, u16);
+    SET(ret, netif, cbor_value, NETOPT_CSMA_RETRIES, u8);
+    SET(ret, netif, cbor_value, NETOPT_HOP_LIMIT, u8);
+//     else if (strcmp("key", key) == 0) {
+//         return _netif_set_encrypt_key(iface, NETOPT_ENCRYPTION_KEY, value);
+//     }
+// #ifdef MODULE_GNRC_IPV6
+//     else if (strcmp("mtu", key) == 0) {
+//         return _netif_set_u16(iface, NETOPT_MAX_PDU_SIZE, GNRC_NETTYPE_IPV6,
+//                               value);
+//     }
+// #endif
+    SET(ret, netif, cbor_value, NETOPT_NID, u16);
+    SET(ret, netif, cbor_value, NETOPT_CHANNEL_PAGE, u16);
+    SET(ret, netif, cbor_value, NETOPT_TX_POWER, i16);
+//     else if (strcmp("retrans", key) == 0) {
+//         return _netif_set_u8(iface, NETOPT_RETRANS, 0, value);
+//     }
+//     else if (strcmp("src_len", key) == 0) {
+//         return _netif_set_u16(iface, NETOPT_SRC_LEN, 0, value);
+//     }
+//     else if (strcmp("state", key) == 0) {
+//         return _netif_set_state(iface, value);
+//     }
+
+    default:
+        return UNICOAP_STATUS_UNPROCESSABLE_ENTITY;
+    }
+    return UNICOAP_STATUS_CHANGED;
+}
+
 static void _list_all_netif_names(nanocbor_encoder_t *enc)
 {
     assert(nanocbor_fmt_array_indefinite(enc) > 0);
@@ -221,7 +380,8 @@ static void _list_all_netif_names(nanocbor_encoder_t *enc)
     assert(nanocbor_fmt_end_indefinite(enc) > 0);
 }
 
-static bool _get_netif_from_query(unicoap_message_t* message, netif_t **netif) {
+static bool _get_netif_from_query(unicoap_message_t* message, netif_t **netif)
+{
     const char* netif_name = NULL;
 
     int netif_name_length = unicoap_options_get_first_uri_query_by_name_string(message->options, "name", &netif_name);
@@ -297,23 +457,7 @@ int _gnrc_netif_handler(unicoap_message_t* message, const unicoap_aux_t* aux,
         return UNICOAP_STATUS_BAD_REQUEST;
     }
 
-    int ret = 0;
-    switch (tag) {
-    case TAG_NETOPT_LINK:
-        if ((ret = _set_link_up_down(&outer_cbor_array, netif, method)) < 0) {
-            return unicoap_response_status_from_errno(ret);
-        }
-        break;
-    case TAG_IPV6:
-        if ((ret = _set_ipv6(&outer_cbor_array, netif, method)) < 0) {
-            return unicoap_response_status_from_errno(ret);
-        }
-        break;
-    default:
-        return UNICOAP_STATUS_UNPROCESSABLE_ENTITY;
-    }
-
-    return UNICOAP_STATUS_CHANGED;
+    return _gnrc_netif_set(tag, &outer_cbor_array, netif, method);
 }
 
 UNICOAP_RESOURCE(netif_cbor) {
@@ -323,7 +467,7 @@ UNICOAP_RESOURCE(netif_cbor) {
   .protocols = UNICOAP_PROTOCOLS(UNICOAP_PROTO_SLIPMUX),
 };
 
-static int _netif_list(netif_t *iface, nanocbor_encoder_t *enc)
+static void _netif_list(netif_t *iface, nanocbor_encoder_t *enc)
 {
 #if IS_USED(MODULE_IPV6)
     ipv6_addr_t ipv6_addrs[MAX(CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF, GNRC_NETIF_IPV6_GROUPS_NUMOF)];
@@ -337,9 +481,8 @@ static int _netif_list(netif_t *iface, nanocbor_encoder_t *enc)
     netopt_state_t state;
     int res;
 
-    if (iface == NULL) {
-        return -ENODEV;
-    }
+    assert(iface);
+    assert(enc);
 
     assert(nanocbor_fmt_array_indefinite(enc) > 0);
 
@@ -464,7 +607,7 @@ static int _netif_list(netif_t *iface, nanocbor_encoder_t *enc)
     }
     res = netif_get_opt(iface, NETOPT_HOP_LIMIT, GNRC_NETTYPE_IPV6, &u8, sizeof(u8));
     if (res >= 0) {
-        TAG_UINT(enc, TAG_NETOPT_HOP_LIMIT_IPV6, u8);
+        TAG_UINT(enc, TAG_NETOPT_HOP_LIMIT, u8);
     }
     TAG_PRE_DISABLE(res, iface, enc, NETOPT_IPV6_FORWARDING, enabled);
     TAG_PRE_DISABLE(res, iface, enc, NETOPT_IPV6_SND_RTR_ADV, enabled);
@@ -548,5 +691,4 @@ static int _netif_list(netif_t *iface, nanocbor_encoder_t *enc)
     // _netif_stats(iface, NETSTATS_IPV6, false);
 #endif
     assert(nanocbor_fmt_end_indefinite(enc) > 0);
-    return 0;
 }
