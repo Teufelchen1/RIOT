@@ -1,0 +1,14 @@
+USEPKG += nanocbor
+
+USEMODULE += unicoap_server
+USEMODULE += unicoap_server_resource_declarations
+USEMODULE += stdio_slipdev
+USEMODULE += slipdev_config
+
+ifneq (,$(filter saul_default%,$(USEMODULE)))
+	USEMODULE += senml_saul
+endif
+
+RIOT_TERMINAL = jelly
+TERMPROG  = Jelly
+TERMFLAGS = "$(PORT)"
