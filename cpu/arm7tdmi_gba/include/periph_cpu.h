@@ -28,6 +28,14 @@ extern "C" {
 
 #define TIMER_NUMOF         (4U)
 #define TIMER_CHANNEL_NUMOF (1U)
+#define TIMER_0_MAX_VALUE   (0xffff)
+
+/**
+ * @name    Xtimer configuration
+ * @{
+ */
+#define XTIMER_HZ           (262200UL)
+/** @} */
 
 /**
  * @brief   A low-level timer_set() implementation is provided
