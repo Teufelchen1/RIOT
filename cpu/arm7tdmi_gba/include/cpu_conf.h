@@ -35,7 +35,7 @@ extern "C"
 #define THREAD_EXTRA_STACKSIZE_PRINTF (512)
 
 #ifndef THREAD_STACKSIZE_DEFAULT
-#define THREAD_STACKSIZE_DEFAULT (1024)
+#define THREAD_STACKSIZE_DEFAULT (2048)
 #endif
 
 #ifndef THREAD_STACKSIZE_IDLE
@@ -73,7 +73,7 @@ extern "C"
 /**
  * @brief   Stack size used for the user mode/kernel init stack
  */
-#define USR_STACKSIZE (4096)
+#define USR_STACKSIZE (64)
 
 /**
  * @brief   The CPU has 2 blocks of SRAM at different addresses.
