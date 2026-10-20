@@ -26,6 +26,14 @@ void gba_timer_isr(uint16_t args)
 }
 #endif
 
+/* Stub implementation used when uart is not used.
+ * Actual implementation is in periph/timer.c */
+#ifndef MODULE_PERIPH_UART
+void gba_uart_isr(void)
+{
+}
+#endif
+
 /* Clear and reset all timers. On a hardboot, the regs always read zero.
  * But on on softboot, you never know! */
 void gba_timer_init(void)
@@ -47,6 +55,19 @@ void gba_timer_init(void)
     }
 }
 
+void gba_uart_init(void)
+{
+    GBA_SIO_RCNT &= ~(1 << 15);
+    GBA_SIO_SCNT |= (0b11 << 12);
+
+    if (IS_USED(MODULE_PERIPH_UART)) {
+        GBA_IE = GBA_IE_UART; /* enable timer interrupt */
+    }
+    else {
+        GBA_IE &= ~GBA_IE_UART; /* disable timer interrupt */
+    }
+}
+
 static void gba_irq_handler(void)
 {
     /* pull the interrupt flag register into a cpu register */
@@ -54,6 +75,9 @@ static void gba_irq_handler(void)
 
     if (IF & GBA_IF_TIMERS) {
         gba_timer_isr(IF & GBA_IF_TIMERS);
+    }
+    if (IF & GBA_IF_UART) {
+        gba_uart_isr();
     }
 
     /* Clear all pending interrupts */
@@ -136,6 +160,7 @@ static inline void gba_irq_init(void)
 void cpu_init(void)
 {
     gba_irq_init();
+    gba_uart_init();
     early_init(); /* brings up stdio early, so debug printing can be used. */
     gba_timer_init();
 }

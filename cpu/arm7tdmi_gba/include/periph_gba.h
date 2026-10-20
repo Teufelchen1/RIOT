@@ -71,6 +71,11 @@ extern "C" {
 #define GBA_IE_TIMERS          (0x0F << 3)
 
 /**
+ * @brief   Bit mask for the uart interrupt enable-flag
+ */
+#define GBA_IE_UART          (1 << 7)
+
+/**
  * @brief   Interrupt flags register
  *
  * Bit   Expl.
@@ -101,6 +106,11 @@ extern "C" {
  * @brief   Bit mask for the timer interrupts has-fired-flag
  */
 #define GBA_IF_TIMERS          (0x0F << 3)
+
+/**
+ * @brief   Bit mask for the uart/serial interrupt has-fired-flag
+ */
+#define GBA_IF_UART          (1 << 7)
 
 /**
  * @brief   Interrupt Master Enable, globally enables / disables interrupts
@@ -168,6 +178,32 @@ typedef volatile gba_timer gba_timer_t;
 #define GBA_TIMER_2          ((gba_timer_t *)0x4000108) /**< A GBA timer */
 #define GBA_TIMER_3          ((gba_timer_t *)0x400010C) /**< A GBA timer */
 /** @} */
+
+#define GBA_SIO_SCNT REG16(0x4000128)
+#define GBA_SIO_DATA REG16(0x400012A)
+#define GBA_SIO_RCNT REG16(0x4000134)
+
+typedef struct {
+    uint16_t baud : 2;
+    uint16_t cts : 1;
+    uint16_t parity : 1;
+    uint16_t send_data : 1;
+    uint16_t receive_data : 1;
+    uint16_t error : 1;
+    uint16_t data_bits : 1;
+    uint16_t fifo_enable : 1;
+    uint16_t parity_enable : 1;
+    uint16_t send_enable : 1;
+    uint16_t receive_enable : 1;
+    uint16_t must_be_1_for_uart : 2;
+    uint16_t irq_enable : 1;
+    uint16_t unused_15 : 1;
+    uint16_t data;
+} gba_uart;
+
+typedef gba_uart volatile gba_uart_t;
+
+#define GBA_UART ((gba_uart_t *) 0x4000128)
 
 /**
  * @brief    Screen dimension in pixel
