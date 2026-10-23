@@ -13,8 +13,9 @@ static void *uart_cb_arg = NULL;
 void gba_uart_isr(void)
 {
     if (uart_cb) {
-        uint8_t data = (uint8_t) GBA_SIO_DATA;
-        uart_cb(uart_cb_arg, data);
+        while (!GBA_UART->receive_data) {
+            uart_cb(uart_cb_arg, (uint8_t) GBA_SIO_DATA);
+        }
     }
 }
 
@@ -41,7 +42,7 @@ int uart_init(uart_t uart, uint32_t baud, uart_rx_cb_t rx_cb, void *arg)
     GBA_UART->cts = 0; /* disable / always send */
     GBA_UART->parity = 0; /* even */
     GBA_UART->data_bits = 1; /* 8 bits */
-    GBA_UART->fifo_enable = 0;
+    GBA_UART->fifo_enable = 1;
     GBA_UART->parity_enable = 0;
     GBA_UART->send_enable = 1;
     GBA_UART->receive_enable = 1;
