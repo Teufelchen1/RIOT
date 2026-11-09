@@ -55,10 +55,9 @@
 _startup:
                 ldr    pc, =reset_handler
 
+.section .init0
 /*.func reset_handler */
 reset_handler:
-
-.section .init0
                 /* Disable interrupts using the GBA control reg */
                 ldr r0, =REG_IME
                 mov r1, #0
@@ -81,9 +80,14 @@ reset_handler:
                 ldr   sp, =__stack_usr_start
 
                 /* call the cpu-bring-up helper from arm7_common/arm7_init.c */
-                bl  bootloader
+                ldr r0, =bootloader
+                mov lr, pc
+                bx  r0
+                nop
+
                 /* start the RIOT kernel */
-                b   kernel_init
+                ldr r0, =kernel_init
+                bx r0
 
                 /* Infinite Loop */
 .section .fini0

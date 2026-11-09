@@ -13,7 +13,7 @@
  extern "C" {
 #endif
 
-#define NEW_TASK_CPSR 0x1F
+#define NEW_TASK_CPSR 0x3F
 #define WORDSIZE 32
 
 uint32_t get_system_speed(void);

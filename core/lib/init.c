@@ -102,7 +102,7 @@ static void *idle_thread(void *arg)
     return NULL;
 }
 
-void kernel_init(void)
+__attribute__((target("arm"))) void kernel_init(void)
 {
     if (!IS_USED(MODULE_CORE_THREAD)) {
         /* RIOT without threads */

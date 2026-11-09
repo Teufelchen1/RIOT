@@ -1,3 +1,5 @@
 MCPU := arm7tdmi
 
+CFLAGS += -mthumb -mthumb-interwork
+
 include $(RIOTCPU)/arm7_common/Makefile.include

@@ -24,23 +24,21 @@ extern "C" {
 
 #define IRQ_MASK 0x00000080
 
-static inline unsigned __get_cpsr(void)
+static __attribute__((target("arm"))) __attribute__((noinline)) unsigned __get_cpsr(void)
 {
     unsigned long retval;
-    __asm__ volatile(" mrs  %0, cpsr" : "=r"(retval) : /* no inputs */ : "memory");
+    __asm__ volatile(".arm\n mrs  %0, cpsr" : "=r"(retval) : /* no inputs */ : "memory");
     return retval;
 }
 
-static inline void __set_cpsr(unsigned val)
+static __attribute__((target("arm"))) __attribute__((noinline)) void __set_cpsr(unsigned val)
 {
-    __asm__ volatile(" msr  cpsr, %0" : /* no outputs */ : "r"(val) : "memory");
+    __asm__ volatile(".arm\n msr  cpsr, %0" : /* no outputs */ : "r"(val) : "memory");
 }
 
 static inline bool irq_is_in(void)
 {
-    int retval;
-    __asm__ volatile(" mrs  %0, cpsr" : "=r"(retval) : /* no inputs */ : "memory");
-    return (retval & INTMode) == 18;
+    return (__get_cpsr() & INTMode) == 18;
 }
 
 static inline __attribute__((always_inline)) unsigned irq_disable(void)
