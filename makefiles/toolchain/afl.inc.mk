@@ -1,9 +1,9 @@
 include $(RIOTMAKE)/toolchain/gnu.inc.mk
 
-CC     = $(PREFIX)afl-gcc-fast
-CXX    = $(PREFIX)afl-g++-fast
-LINK   = $(PREFIX)afl-gcc-fast
-LINKXX = $(PREFIX)afl-g++-fast
+CC     = $(PREFIX)afl-clang-fast
+CXX    = $(PREFIX)afl-clang-fast++
+LINK   = $(PREFIX)afl-clang-fast
+LINKXX = $(PREFIX)afl-clang-fast++
 
 ifeq (1,$(INSIDE_DOCKER))
   # The Ubuntu version used for riotdocker (Ubuntu 26.04.1 LTS)

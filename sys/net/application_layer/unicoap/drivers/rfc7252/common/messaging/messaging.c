@@ -144,10 +144,10 @@ static inline uint16_t _get_id(const unicoap_packet_t* packet)
     return packet->properties.rfc7252.id;
 }
 
-static inline const uint16_t* _get_id_ptr(const unicoap_packet_t* packet)
-{
-    return &packet->properties.rfc7252.id;
-}
+// static inline const uint16_t* _get_id_ptr(const unicoap_packet_t* packet)
+// {
+//     return &packet->properties.rfc7252.id;
+// }
 
 static inline void _set_id(unicoap_packet_t* packet, uint16_t id)
 {
